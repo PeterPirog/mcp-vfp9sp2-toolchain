@@ -247,6 +247,25 @@ def run_dbf_list(dbf_dir):
         emit(False, stderr="dbf_list failed: %s" % e)
 
 
+def run_audit(source, out, skip_sync, include_data, data_formats):
+    sys.path.insert(0, HERE)
+    try:
+        import vfp_audit
+    except Exception as e:
+        emit(False, stderr="cannot import vfp_audit: %s" % e)
+    try:
+        auditor = vfp_audit.VFPProjectAuditor(
+            source_dir=source, out_dir=out,
+            skip_sync=skip_sync,
+            include_data=include_data,
+            data_formats=tuple(f.strip() for f in data_formats.split(",")),
+        )
+        result = auditor.run()
+        emit(True, rc=0, auditDir=result["auditDir"], summary=result["summary"])
+    except Exception as e:
+        emit(False, stderr="audit failed: %s" % e)
+
+
 def main():
     ap = argparse.ArgumentParser(prog="vfp_driver")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -288,6 +307,13 @@ def main():
     pl = sub.add_parser("dbf_list", help="List all DBF files in a directory tree (no VFP9 needed)")
     pl.add_argument("--dir", required=True, help="Directory to scan")
 
+    pa = sub.add_parser("audit", help="Run comprehensive audit: sync + DBF schema + table relationships + class analysis")
+    pa.add_argument("--source", required=True, help="VFP project root directory")
+    pa.add_argument("--out", required=True, help="Output directory for audit report")
+    pa.add_argument("--skip-sync", action="store_true", help="Skip BIN2PRG conversion (use existing cache)")
+    pa.add_argument("--include-data", action="store_true", help="Also export DBF record data")
+    pa.add_argument("--data-formats", default="jsonl", help="Comma-separated data export formats: jsonl,csv")
+
     a = ap.parse_args()
     if a.cmd == "verno":
         run_verno(a.prg)
@@ -303,6 +329,8 @@ def main():
         run_dbf_data(a.input, a.out, a.format, a.deleted)
     elif a.cmd == "dbf_list":
         run_dbf_list(a.dir)
+    elif a.cmd == "audit":
+        run_audit(a.source, a.out, a.skip_sync, a.include_data, a.data_formats)
 
 
 if __name__ == "__main__":

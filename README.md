@@ -71,7 +71,7 @@ opencode vfp_find_symbol     # "Find class 'myBaseForm'"
 
 An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 13 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
 
-### 13 Tools This Repo Provides
+### 14 Tools This Repo Provides
 
 | Tool | What it does | VFP9 required? |
 |---|---|---|
@@ -88,6 +88,7 @@ An **agent** is a pre-configured persona. Place `.md` files in `~/.config/openco
 | `vfp_trace` | Follows a class's inheritance chain (MyClass → Form → Container → Object) | ❌ No |
 | `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python, no VFP9) | ❌ No |
 | `vfp_list_tables` | Lists all DBF tables in a directory tree with field/record counts | ❌ No |
+| `vfp_audit` | Comprehensive audit: sync + DBF schema + table relationships + class analysis → target directory | ⚠️ Partial |
 
 ---
 
@@ -268,16 +269,18 @@ vfp-integration-toolchain/
 ├── README.md              ← This file
 ├── THANKS.md              ← Attributions (Fabio Zadro / FoxBin2Prg, dbfbridge / dbfread)
 ├── install.py             ← One-step installer (symlinks + verify)
+├── requirements.txt       ← Optional Python dependencies (dbfread)
 ├── .gitignore
 ├── config.json            ← Portable VFP/FoxBin2Prg config (schema v2)
 ├── FoxBin2Prg-AI.cfg      ← Strict read-only AI profile
-├── vfp_driver.py          ← Python orchestrator (verno/convert/index/dbf_schema/dbf_data/dbf_list)
+├── vfp_driver.py          ← Python orchestrator (all subcommands)
+├── vfp_dbf_export.py      ← Pure-Python DBF schema + data export (no VFP9)
+├── vfp_audit.py           ← Comprehensive project auditor
 ├── vfp_convert.vbs        ← VBS driver for BIN2PRG (17-param execute())
 ├── vfp_indexer.py         ← SC2/VC2 parser → JSON symbol index
-├── vfp_dbf_export.py      ← Pure-Python DBF schema + data export (optional dbfread)
 ├── vfp_verno.vbs          ← VBS driver for version check
 ├── tools/
-│   └── vfp.ts             ← 13 OpenCode custom tools (TypeScript)
+│   └── vfp.ts             ← 14 OpenCode custom tools (TypeScript)
 └── agents/
     └── vfp-analyst.md     ← @vfp-analyst agent
 ```
@@ -313,6 +316,12 @@ opencode vfp_find_table_usage --tableName "CUSTOMERS" --directory /path/to/vfp/p
 # Extract a single class from a library
 opencode vfp_export_class --library "lib.vcx" --className "MyClass"
 
+# Run a comprehensive audit of the project
+opencode vfp_audit --source /path/to/vfp/project --out /path/to/audit/output
+
+# List all DBF tables in project (no VFP9 needed!)
+opencode vfp_list_tables --directory /path/to/vfp/project
+
 # Export DBF table schema (no VFP9 needed!)
 opencode vfp_export_table --input "data/customers.dbf"
 
@@ -323,12 +332,36 @@ opencode vfp_export_table --input "data/customers.dbf" --format jsonl --deleted 
 opencode vfp_list_tables --directory /path/to/vfp/project
 ```
 
+### Comprehensive Audit (One Command)
+
+The `vfp_audit` tool consolidates everything into a single output directory:
+
+```bash
+# Full audit (needs VFP9 for BIN2PRG, DBF schema export works without)
+opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit"
+
+# Audit without VFP9 (schema + relationships only, uses existing cache)
+opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit" --skip-sync
+
+# Comprehensive audit with data export (JSONL + CSV)
+opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit" --include-data --data-formats jsonl,csv
+```
+
+**What gets generated in the output directory:**
+- `audit_report.md` — Human-readable Markdown summary
+- `project_summary.json` — File inventory, class/method counts
+- `database_schema.json` — All DBF table schemas with encodings, fields, types
+- `table_relationships.json` — Table usage patterns, SQL SELECT/INSERT/REPLACE, inferred joins
+- `class_analysis.json` — Class hierarchy, inheritance depth, complexity ranking
+- `dbf/` — Individual `<table>_schema.json` files for each DBF
+
 ### Via @vfp-analyst Agent
 
 ```bash
 opencode @vfp-analyst "Find all forms that reference the CUSTOMERS table"
 opencode @vfp-analyst "Trace the inheritance chain for the 'form_archdoplan' class"
 opencode @vfp-analyst "Show me all methods named 'Click' in this project"
+opencode @vfp-analyst "Run a full audit of this project and save to D:/audit_output"
 ```
 
 ### Via Python Driver Directly
@@ -495,10 +528,31 @@ Key settings:
 
 ### For a complete application rewrite, you need:
 
-1. **This toolchain's output** → provides all class/method/property code ✅
+1. **This toolchain's output** (`vfp_sync`) → provides all class/method/property code ✅
 2. **This toolchain's DBF export** (`vfp_export_table`) → table schemas + data ✅ (no longer needs external tools)
 3. **DBC schema export** → table relationships and constraints
 4. **PRG file analysis** → copy PRG files to cache or search source project
+
+### One-Command Audit
+
+Use `vfp_audit` to generate a complete project audit in any target directory:
+
+```bash
+opencode vfp_audit --source "/path/to/vfp/project" --out "/path/to/audit/output"
+```
+
+This generates:
+- **`audit_report.md`** — human-readable audit summary
+- **`project_summary.json`** — file inventory, class/method counts
+- **`database_schema.json`** — all DBF table schemas with encodings
+- **`table_relationships.json`** — table usage patterns, inferred SQL joins
+- **`class_analysis.json`** — class hierarchy, inheritance depth, complexity ranking
+
+The `@vfp-analyst` agent can then read these files and answer questions like:
+- "Which tables have the most records?"
+- "What are the inheritance chains for each form?"
+- "Are there inefficient table joins in the code?"
+- "What DBF encodings are used in this project?"
 
 ### Recommendation
 

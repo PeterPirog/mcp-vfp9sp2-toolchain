@@ -25,13 +25,22 @@ You have access to the following custom tools (provided by `~/.config/opencode/t
 | `vfp_find_references` | Search text for references to a symbol | ❌ No |
 | `vfp_find_table_usage` | Scan for table usage (USE, SELECT, INSERT, etc.) | ❌ No |
 | `vfp_trace` | Trace class inheritance chain across libraries | ❌ No |
-| `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python) | ❌ No |
-| `vfp_list_tables` | List all DBF tables in a directory with field/record counts | ❌ No |
+| `vfp_export_table` | Export DBF schema + optional data to JSONL/CSV | ❌ No |
+| `vfp_list_tables` | List all DBF tables with field/record counts | ❌ No |
+| `vfp_audit` | Comprehensive one-command audit to a target directory | ⚠️ Partial |
 
 You can also use standard file tools (`read`, `grep`, `glob`) directly on the `.sc2`/`.vc2`/`.prg` files in the project or the `.vfp-ai` cache directory.
 
 ## Typical Workflow
 
+### Quick Audit (single command)
+To generate a full project audit in a target directory, ask the user for the output path and run:
+```
+vfp_audit --source <project_dir> --out <target_dir>
+```
+This produces: `audit_report.md`, `project_summary.json`, `database_schema.json`, `table_relationships.json`, `class_analysis.json`, plus individual `<table>_schema.json` files.
+
+### Detailed Investigation
 1. **Detect** — Run `vfp_detect` to confirm VFP artifacts exist in the project.
 2. **Status** — Run `vfp_status` to verify FoxBin2Prg + VFP9 are available.
 3. **Sync** — Run `vfp_sync` with `--full` to convert all binaries and build a symbol index. If VFP9 is not available, you can still:

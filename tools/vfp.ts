@@ -550,3 +550,31 @@ export const vfp_list_tables = tool({
     return JSON.parse(out.trim())
   },
 })
+
+export const vfp_audit = tool({
+  description:
+    "Run a comprehensive audit of a VFP project: BIN2PRG sync (if VFP9 available) + DBF schema export + table relationship analysis + class hierarchy analysis. Outputs a consolidated audit report to a target directory. DBF schema analysis works WITHOUT VFP9.",
+  args: {
+    source: tool.schema.string().describe("Source directory of the VFP project to audit."),
+    out: tool.schema.string().describe("Target directory where audit output will be written (schema JSON, data, relationships, Markdown report)."),
+    skipSync: tool.schema.boolean().optional().describe("Skip BIN2PRG conversion — use existing .vfp-ai cache if available."),
+    includeData: tool.schema.boolean().optional().describe("Also export DBF record data (in addition to schema)."),
+    dataFormats: tool.schema.string().optional().describe("Comma-separated data export formats when includeData=true: 'jsonl', 'csv'. Default: 'jsonl'."),
+  },
+  async execute(args, context) {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error("Cannot read config.json at " + CONFIG)
+
+    const cmd = [py, DRIVER, "audit", "--source", args.source, "--out", args.out]
+    if (args.skipSync) cmd.push("--skip-sync")
+    if (args.includeData) cmd.push("--include-data")
+    if (args.dataFormats) cmd.push("--data-formats", args.dataFormats)
+
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `audit exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
