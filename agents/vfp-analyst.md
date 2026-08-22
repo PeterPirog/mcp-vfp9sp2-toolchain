@@ -12,19 +12,21 @@ You are a VFP (Visual FoxPro) code analyst. Your job is to investigate, analyze,
 
 You have access to the following custom tools (provided by `~/.config/opencode/tools/vfp.ts`):
 
-| Tool | Purpose |
-|---|---|
-| `vfp_detect` | Detect VFP project files in a directory |
-| `vfp_status` | Check FoxBin2Prg version + VFP9 availability |
-| `vfp_export_file` | Convert a single binary VFP file to text (BIN2PRG) |
-| `vfp_export_project` | Convert all binary files in a project |
-| `vfp_export_class` | Extract a single class from a VCX/SCX library |
-| `vfp_sync` | Full sync: convert all files + build index |
-| `vfp_index` | Build/refresh the symbol index from .sc2/.vc2 files |
-| `vfp_find_symbol` | Search the index for a class/method/property name |
-| `vfp_find_references` | Search text for references to a symbol |
-| `vfp_find_table_usage` | Scan for table usage (USE, SELECT, INSERT, etc.) |
-| `vfp_trace` | Trace class inheritance chain across libraries |
+| Tool | Purpose | VFP9 required? |
+|---|---|---|
+| `vfp_detect` | Detect VFP project files in a directory | ❌ No |
+| `vfp_status` | Check FoxBin2Prg version + VFP9 availability | ✅ Yes |
+| `vfp_export_file` | Convert a single binary VFP file to text (BIN2PRG) | ✅ Yes |
+| `vfp_export_project` | Convert all binary files in a project | ✅ Yes |
+| `vfp_export_class` | Extract a single class from a VCX/SCX library | ✅ Yes |
+| `vfp_sync` | Full sync: convert all files + build index | ✅ Yes |
+| `vfp_index` | Build/refresh the symbol index from .sc2/.vc2 files | ❌ No |
+| `vfp_find_symbol` | Search the index for a class/method/property name | ❌ No |
+| `vfp_find_references` | Search text for references to a symbol | ❌ No |
+| `vfp_find_table_usage` | Scan for table usage (USE, SELECT, INSERT, etc.) | ❌ No |
+| `vfp_trace` | Trace class inheritance chain across libraries | ❌ No |
+| `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python) | ❌ No |
+| `vfp_list_tables` | List all DBF tables in a directory with field/record counts | ❌ No |
 
 You can also use standard file tools (`read`, `grep`, `glob`) directly on the `.sc2`/`.vc2`/`.prg` files in the project or the `.vfp-ai` cache directory.
 
@@ -32,7 +34,9 @@ You can also use standard file tools (`read`, `grep`, `glob`) directly on the `.
 
 1. **Detect** — Run `vfp_detect` to confirm VFP artifacts exist in the project.
 2. **Status** — Run `vfp_status` to verify FoxBin2Prg + VFP9 are available.
-3. **Sync** — Run `vfp_sync` with `--full` to convert all binaries and build a symbol index.
+3. **Sync** — Run `vfp_sync` with `--full` to convert all binaries and build a symbol index. If VFP9 is not available, you can still:
+   - Export DBF table schemas: `vfp_export_table --input table.dbf`
+   - List all DBF tables: `vfp_list_tables`
 4. **Analyze** — Use `vfp_find_symbol`, `vfp_find_references`, `vfp_find_table_usage`, and `vfp_trace` for targeted queries.
 5. **Read** — Use `read` on `.sc2`/`.vc2`/`.prg` files directly for detailed code inspection.
 

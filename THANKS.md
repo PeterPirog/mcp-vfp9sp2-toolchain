@@ -24,6 +24,7 @@ This entire VFP integration toolchain depends on FoxBin2Prg's `c_foxbin2prg` COM
 | `vfp_convert.vbs` (VBS driver host) | **This repo** (inspired by upstream `Convert_VFP9_BIN_2_PRG.vbs`) |
 | `vfp_driver.py` (Python orchestrator) | **This repo** |
 | `vfp_indexer.py` (SC2/VC2 parser) | **This repo** |
+| `vfp_dbf_export.py` (DBF schema/data export) | **This repo** (architecture inspired by dbfbridge) |
 | `tools/vfp.ts` (OpenCode custom tools) | **This repo** |
 | `agents/vfp-analyst.md` (OpenCode agent) | **This repo** |
 | `install.py` (one-step installer) | **This repo** |
@@ -50,3 +51,20 @@ These files are NOT included in this repository. You must download them separate
 ### Thank you
 
 Thank you, Fabio — for creating and maintaining FoxBin2Prg, without which this integration would not be possible.
+
+---
+
+## DBF support: dbfread (khicaey/ExcelPython) and dbfbridge
+
+**dbfread**: https://github.com/elixir-dbf/dbfread  
+**dbfbridge**: https://github.com/PeterPirog/dbfbridge  
+
+The DBF schema and data export tooling (`vfp_dbf_export.py`, `vfp_export_table`, `vfp_list_tables`) is inspired by the `dbfbridge` project by Peter Pirog. This toolchain does **NOT** depend on the `dbfbridge` package as an external dependency — instead, it uses the same underlying `dbfread` library directly, with a built-in minimal DBF reader as a fallback when `dbfread` is not installed.
+
+- `dbfread` provides streaming DBF/FPT reading (field descriptors, records, memo data)
+- `dbfbridge` provides the architectural pattern (schema JSON + data JSONL export)
+- This repo re-implements the pattern independently — no `dbfbridge` import required
+
+**Install**: `pip install dbfread` (optional — built-in reader used as fallback)
+
+Thank you to both projects for their excellent work on VFP DBF handling.

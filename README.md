@@ -44,6 +44,7 @@ export VFP9_EXE="/path/to/vfp9.exe"
 - `vfp_status` → **pokaże błąd** "VFP9 not found"
 - `vfp_sync` / `vfp_export_*` → **pokaże błąd** "COM object creation failed"
 - `vfp_index` / `vfp_find_symbol` / `vfp_trace` → **działają** ale tylko na istniejących plikach `.sc2`/`.vc2` (bez sync nie ma plików do analizy)
+- `vfp_export_table` / `vfp_list_tables` → **działają** bez VFP9! Czytaszą pliki DBF bezpośrednio w Pythonie
 
 ---
 
@@ -68,23 +69,25 @@ opencode vfp_find_symbol     # "Find class 'myBaseForm'"
 
 ### What is "@vfp-analyst"?
 
-An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 11 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
+An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 13 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
 
-### 11 Tools This Repo Provides
+### 13 Tools This Repo Provides
 
-| Tool | What it does |
-|---|---|
-| `vfp_detect` | Scans a directory — tells you if VFP files exist and what types |
-| `vfp_status` | Checks that VFP9.exe and FoxBin2Prg are installed and working |
-| `vfp_export_file` | Converts one binary file (.scx/.vcx/.frx) to text (.sc2/.vc2) |
-| `vfp_export_project` | Converts all binary files in a directory tree |
-| `vfp_export_class` | Extracts one class from a library: `vfp_export_class --library lib.vcx --className MyClass` |
-| `vfp_sync` | Does `vfp_export_project` + builds search index (one command) |
-| `vfp_index` | Builds/refreshes the JSON symbol index from cached text files |
-| `vfp_find_symbol` | Searches the index for class/method/property names |
-| `vfp_find_references` | Searches converted text files for references to a symbol |
-| `vfp_find_table_usage` | Finds USE/SELECT/INSERT/REPLACE patterns in source |
-| `vfp_trace` | Follows a class's inheritance chain (MyClass → Form → Container → Object) |
+| Tool | What it does | VFP9 required? |
+|---|---|---|
+| `vfp_detect` | Scans a directory — tells you if VFP files exist and what types | ❌ No |
+| `vfp_status` | Checks that VFP9.exe and FoxBin2Prg are installed and working | ✅ Yes |
+| `vfp_export_file` | Converts one binary file (.scx/.vcx/.frx) to text (.sc2/.vc2) | ✅ Yes |
+| `vfp_export_project` | Converts all binary files in a directory tree | ✅ Yes |
+| `vfp_export_class` | Extracts one class from a library: `vfp_export_class --library lib.vcx --className MyClass` | ✅ Yes |
+| `vfp_sync` | Does `vfp_export_project` + builds search index (one command) | ✅ Yes |
+| `vfp_index` | Builds/refreshes the JSON symbol index from cached text files | ❌ No |
+| `vfp_find_symbol` | Searches the index for class/method/property names | ❌ No |
+| `vfp_find_references` | Searches converted text files for references to a symbol | ❌ No |
+| `vfp_find_table_usage` | Finds USE/SELECT/INSERT/REPLACE patterns in source | ❌ No |
+| `vfp_trace` | Follows a class's inheritance chain (MyClass → Form → Container → Object) | ❌ No |
+| `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python, no VFP9) | ❌ No |
+| `vfp_list_tables` | Lists all DBF tables in a directory tree with field/record counts | ❌ No |
 
 ---
 
@@ -118,13 +121,21 @@ opencode vfp_find_symbol --query "MyForm"
 
 | Requirement | Details |
 |---|---|
-| **VFP 9** | Installed at default path (`C:\Program Files (x86)\Microsoft Visual FoxPro 9\vfp9.exe`) or set `VFP9_EXE` env var |
+| **VFP 9** | Installed at default path (`C:\Program Files (x86)\Microsoft Visual FoxPro 9\vfp9.exe`) or set `VFP9_EXE` env var. **Not needed** for DBF export tools (see below) |
 | **Python 3** | Accessible as `py` (Windows) or `python3` (Linux/macOS) |
-| **FoxBin2Prg** | [Download from GitHub](https://github.com/fdbozzo/foxbin2prg) — place `foxbin2prg.prg` somewhere on disk |
+| **FoxBin2Prg** | [Download from GitHub](https://github.com/fdbozzo/foxbin2prg) — place `foxbin2prg.prg` somewhere on disk. **Not needed** for DBF schema/data export |
+| **dbfread** (optional) | `pip install dbfread` — provides better DBF field type parsing. If not installed, a built-in minimal DBF reader is used as fallback |
 
 ### One-Step Install
 
 ```bash
+git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
+cd vfp-integration-toolchain
+
+# Optional: install dbfread for better DBF field type parsing
+pip install dbfread  # or: py -m pip install dbfread
+
+# Run the installer (needs FoxBin2Prg directory for BIN2PRG tools)
 py install.py --foxbin2prg-dir "C:\path\to\foxbin2prg"
 ```
 
@@ -167,6 +178,8 @@ export VFP_FOXBIN2PRG_DIR="/path/to/foxbin2prg"
 | `VFP_TOOLCHAIN_HOME` | Root directory of this toolchain | `~/.config/opencode/vfp` or repo root |
 | `VFP_FOXBIN2PRG_DIR` | Directory containing `foxbin2prg.prg` | `tools/foxbin2prg` relative to toolchain |
 | `VFP9_EXE` | Path to `vfp9.exe` | Standard install path |
+
+**Note**: DBF export tools (`vfp_export_table`, `vfp_list_tables`) work **without** VFP9 and without FoxBin2Prg. They only need Python 3 and optionally `dbfread` (`pip install dbfread`).
 
 ---
 
@@ -228,19 +241,23 @@ Save common commands as Warp Workflows (Ctrl+Shift+W):
 | `VFP Sync` | `py vfp_driver.py convert_dir --project %DIR% --out .vfp-ai --cfg FoxBin2Prg-AI.cfg --prg tools/foxbin2prg/foxbin2prg.prg` |
 | `VFP Index` | `py vfp_driver.py index --project .vfp-ai/source --cache .vfp-ai --full` |
 | `VFP Status` | `py vfp_driver.py verno --prg tools/foxbin2prg/foxbin2prg.prg` |
+| `VFP DBF Schema` | `py vfp_driver.py dbf_schema --input %DBF_FILE% --out .vfp-ai/dbf` |
+| `VFP DBF Data` | `py vfp_driver.py dbf_data --input %DBF_FILE% --out .vfp-ai/dbf --format jsonl --deleted include` |
+| `VFP List Tables` | `py vfp_driver.py dbf_list --dir %DIR%` |
 
 ### Warp AI vs OpenCode AI
 
 - **Warp AI** (Ctrl+L): General terminal AI, runs commands for you
 - **OpenCode** (Ctrl+O): Project-aware agent, understands codebase context
 
-For VFP work, use **OpenCode** — the `@vfp-analyst` agent has domain-specific knowledge about VFP projects, FoxBin2Prg output format, and the 11 tools in this repo.
+For VFP work, use **OpenCode** — the `@vfp-analyst` agent has domain-specific knowledge about VFP projects, FoxBin2Prg output format, and the 13 tools in this repo.
 
 ### Windows + Warp Specific Note
 
 VFP9 is **Windows-only**. If you're on macOS with Warp:
-- You need a Windows VM or VM-based VFP9 installation
+- You need a Windows VM or VM-based VFP9 installation for BIN2PRG conversion
 - The indexing/search tools (`vfp_find_symbol`, `vfp_trace`) **do NOT need VFP9** — they work on cached `.sc2`/`.vc2` text files
+- The DBF export tools (`vfp_export_table`, `vfp_list_tables`) **do NOT need VFP9** — they work on any platform with Python 3 (install `dbfread`: `pip install dbfread` for best results)
 
 ---
 
@@ -249,17 +266,18 @@ VFP9 is **Windows-only**. If you're on macOS with Warp:
 ```
 vfp-integration-toolchain/
 ├── README.md              ← This file
-├── THANKS.md              ← Attributions (Fabio Zadro / FoxBin2Prg)
+├── THANKS.md              ← Attributions (Fabio Zadro / FoxBin2Prg, dbfbridge / dbfread)
 ├── install.py             ← One-step installer (symlinks + verify)
 ├── .gitignore
 ├── config.json            ← Portable VFP/FoxBin2Prg config (schema v2)
 ├── FoxBin2Prg-AI.cfg      ← Strict read-only AI profile
-├── vfp_driver.py          ← Python orchestrator (verno/convert/index)
+├── vfp_driver.py          ← Python orchestrator (verno/convert/index/dbf_schema/dbf_data/dbf_list)
 ├── vfp_convert.vbs        ← VBS driver for BIN2PRG (17-param execute())
 ├── vfp_indexer.py         ← SC2/VC2 parser → JSON symbol index
+├── vfp_dbf_export.py      ← Pure-Python DBF schema + data export (optional dbfread)
 ├── vfp_verno.vbs          ← VBS driver for version check
 ├── tools/
-│   └── vfp.ts             ← 11 OpenCode custom tools (TypeScript)
+│   └── vfp.ts             ← 13 OpenCode custom tools (TypeScript)
 └── agents/
     └── vfp-analyst.md     ← @vfp-analyst agent
 ```
@@ -294,6 +312,15 @@ opencode vfp_find_table_usage --tableName "CUSTOMERS" --directory /path/to/vfp/p
 
 # Extract a single class from a library
 opencode vfp_export_class --library "lib.vcx" --className "MyClass"
+
+# Export DBF table schema (no VFP9 needed!)
+opencode vfp_export_table --input "data/customers.dbf"
+
+# Export DBF table data to JSONL (no VFP9 needed!)
+opencode vfp_export_table --input "data/customers.dbf" --format jsonl --deleted include
+
+# List all DBF tables in project (no VFP9 needed!)
+opencode vfp_list_tables --directory /path/to/vfp/project
 ```
 
 ### Via @vfp-analyst Agent
@@ -349,7 +376,10 @@ py vfp_driver.py index --project ".vfp-ai/source" --cache ".vfp-ai" --full
 │  vfp_driver.py (Python orchestrator)                         │
 │    ├── verno  →  vfp_verno.vbs  →  VFP9 COM → FoxBin2Prg     │
 │    ├── convert → vfp_convert.vbs →  VFP9 COM → execute() 17  │
-│    └── index  →  vfp_indexer.py →  parse .sc2/.vc2 → index   │
+│    ├── index  →  vfp_indexer.py →  parse .sc2/.vc2 → index   │
+│    ├── dbf_schema → vfp_dbf_export.py → dbfread (no VFP9)    │
+│    ├── dbf_data   → vfp_dbf_export.py → dbfread (no VFP9)    │
+│    └── dbf_list   → vfp_dbf_export.py → dbfread (no VFP9)    │
 ├─────────────────────────────────────────────────────────────┤
 │  vfp_convert.vbs (VBS)                                       │
 │    1. Create VisualFoxPro.Application.9 COM object          │
@@ -431,7 +461,7 @@ Key settings:
 
 **Can you rewrite the entire application from this toolchain's output?** 
 
-**Partially yes** — for the **code/logic layer**. **No** for the **data layer**.
+**Partially yes** — for the **code/logic layer**. **No** for the **data layer** (table records).
 
 ### What IS captured (sufficient for code rewrite)
 
@@ -441,7 +471,8 @@ Key settings:
 | **Class libraries** | `.vcx` → `.vc2` (41 files) | ✅ Full class hierarchy, 530 methods with code, all properties |
 | **Reports** | `.frx` → `.fr2` (65 files) | ✅ Report structure, fields, groups |
 | **Projects** | `.pjx` → `.pj2` (8 files) | ✅ Project file lists, main program, file types (K=Form, P=PRG, D=DBF) |
-| **Tables** | `.dbf` → `.db2` | ⚠️ Structure captured (field names/types), but DB2 generation to cache has issues (see below) |
+| **Table structure** | `.dbf` → schema via `vfp_export_table` (pure Python, no VFP9) | ✅ Field names, types, lengths, decimals, codepage, record count, memo presence |
+| **Table data** | `.dbf` data via `vfp_export_table --format jsonl` | ✅ Full record data export to JSONL/CSV (pure Python, no VFP9) |
 | **PRG files** | `.prg` (14 files in PJX) | ⚠️ Referenced in PJ2 but NOT converted to cache (they're already text) |
 
 **Total captured for code rewrite:**
@@ -451,27 +482,27 @@ Key settings:
 - Full form layouts (control positions, bindings, event handlers)
 - Table references (USE/SELECT statements in code)
 - Project structure (what files belong to what project, main entry point)
+- DBF table schemas (fields, types, codepage) via `vfp_export_table`
+- DBF table data records via `vfp_export_table --format jsonl|csv`
 
 ### What is NOT captured (additional work needed)
 
 | Missing | Why | For rewrite: |
 |---|---|---|
-| **DBF table data** | Data records, not structure | Need separate data migration/export |
 | **CDX index structure** | Binary index files, not converted | Recreate index strategy manually |
 | **DBC database containers** | Not fully parsed (constraints, relationships) | Extract separately with DBC tools |
 | **PRG source files** | Not copied to `.vfp-ai/source/` cache | Copy manually or enhance sync |
-| **DB2 table structure** | `cOutputFolder` doesn't redirect DBF output | DB2 files go to source dir, not cache |
 
 ### For a complete application rewrite, you need:
 
 1. **This toolchain's output** → provides all class/method/property code ✅
-2. **Separate DBF data export** → table records (DBF tools, not this repo)
+2. **This toolchain's DBF export** (`vfp_export_table`) → table schemas + data ✅ (no longer needs external tools)
 3. **DBC schema export** → table relationships and constraints
 4. **PRG file analysis** → copy PRG files to cache or search source project
 
 ### Recommendation
 
-Use this toolchain to reverse-engineer the **application logic** (forms, classes, methods). Then supplement with database tools for the **data layer** (tables, relationships, data).
+Use this toolchain to reverse-engineer the **application logic** (forms, classes, methods). Then use `vfp_export_table` for the **data layer** (table schemas + data). The DBF export works with pure Python (`dbfread` library) — **no VFP9 required**.
 
 ---
 
@@ -483,17 +514,20 @@ Verified on `D:\Logis_projekt\logis_bok_4` (1,218 binary files):
 - 0 source files modified (SHA256/size/mtime verified unchanged)
 - Index: 599 classes, 8,168 methods with full code, 6,262 properties
 - `cOutputFolder` correctly redirects SC2/VC2/FR2 output to cache
+- DBF schema export tested with `vfp_export_table` (pure Python, no VFP9)
+- DBF data export to JSONL tested (pure Python, no VFP9)
 
-Note: DBF→DB2 conversion returns `RC=0` but does NOT create `.db2` in cache (`cOutputFolder` does not redirect DBF output in FoxBin2Prg). Pre-existing `.db2` files exist in source directory from prior runs.
+Note: DBF→DB2 conversion via FoxBin2Prg returns `RC=0` but does NOT create `.db2` in cache (`cOutputFolder` does not redirect DBF output in FoxBin2Prg). Use `vfp_export_table` instead — it exports DBF schema directly to `.vfp-ai/dbf/` cache without needing VFP9 or FoxBin2Prg.
 
 ## Limitations
 
-1. **Windows-only**: VFP9 COM host is Windows-specific
-2. **Requires VFP9 installed**: No standalone FoxBin2Prg.exe exists; the VFP9 COM automation host is required
-3. **DBF without CDX**: Files missing structural CDX will fail conversion (rc != 0)
-4. **Large projects**: Full sync of 600+ files takes ~5 minutes (VFP9 COM startup per file)
-5. **DB2 cache issue**: DBF→DB2 conversion returns `RC=0` but does not create `.db2` in cache (`cOutputFolder` does not redirect DBF output in FoxBin2Prg). Table structure can be obtained by running conversion without `cOutputFolder` or using FoxBin2Prg's standalone DBF tools.
+1. **Windows-only**: VFP9 COM host is Windows-specific. DBF export tools work on any platform.
+2. **Requires VFP9 installed** for BIN2PRG conversion: No standalone FoxBin2Prg.exe exists; the VFP9 COM automation host is required. DBF schema/data export works **without** VFP9.
+3. **DBF without CDX**: Files missing structural CDX will fail FoxBin2Prg conversion (rc != 0). DBF schema/export via `vfp_export_table` does NOT need CDX.
+4. **Large projects**: Full sync of 600+ files takes ~5 minutes (VFP9 COM startup per file). DBF export is fast (no COM overhead).
+5. **DB2 cache issue**: DBF→DB2 conversion via FoxBin2Prg returns `RC=0` but does not create `.db2` in cache (`cOutputFolder` does not redirect DBF output). Use `vfp_export_table` instead for DBF schema — it exports directly to `.vfp-ai/dbf/` cache.
 6. **PRG files**: Not automatically copied to `.vfp-ai/source/`. Only referenced in PJ2 project files. To search PRG code, either copy them to the cache or use `vfp_find_references` on the source project directory directly.
+7. **DBF memo content**: Fallback reader (without `dbfread`/`FoxBin2Prg`) can detect memo fields but cannot read FPT content. Install `dbfread` for full memo support: `pip install dbfread`.
 
 ## Credits
 

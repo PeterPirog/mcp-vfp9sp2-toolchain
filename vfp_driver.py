@@ -4,14 +4,21 @@
 vfp_driver.py - single Python entrypoint for the OpenCode VFP toolchain.
 
 Subcommands:
-  verno      --prg <foxbin2prg.prg>
-  convert    --input <file-or-lib::class> --type T --out <folder> --cfg <cfg> --prg <prg>
-  convert_dir --project <root> --out <folder> --cfg <cfg> --prg <prg> [--timeout N]
-  index      --project <root> --cache <.vfp-ai> [--full]
+  verno          --prg <foxbin2prg.prg>
+  convert        --input <file-or-lib::class> --type T --out <folder> --cfg <cfg> --prg <prg>
+  convert_dir    --project <root> --out <folder> --cfg <cfg> --prg <prg> [--timeout N]
+  index          --project <root> --cache <.vfp-ai> [--full]
+  dbf_schema     --input <table.dbf> --out <folder>
+  dbf_data       --input <table.dbf> --out <folder> --format <jsonl|csv> [--deleted skip|separate|include]
+  dbf_list       --dir <folder>
 
 Output protocol: exactly one JSON object on stdout:
   {"ok": bool, "rc": int|null, "version": str|null, "stdout": str, "stderr": str, "data": {...}}
 Exit code: 0 when ok, 2 when not ok.
+
+Note on dbfread: DBF schema/data export uses the optional `dbfread` library
+(same dependency as the dbfbridge project). If not installed, a built-in
+minimal DBF reader is used as fallback. No hard dependency required.
 """
 
 import argparse
@@ -171,11 +178,73 @@ def run_index(project, cache, full=False):
         import vfp_indexer
     except Exception as e:
         emit(False, stderr="cannot import vfp_indexer: %s" % e)
+    # If we reach here, emit() exited on failure
+    data = vfp_indexer.run(project, cache, full=full)
+    emit(True, rc=0, data=data)
+
+
+# ---------------------------------------------------------------------------
+# DBF schema/data export (pure Python, no VFP9 required)
+# Uses optional dbfread library with built-in fallback reader.
+# ---------------------------------------------------------------------------
+
+def run_dbf_schema(input_path, out_dir):
+    sys.path.insert(0, HERE)
     try:
-        data = vfp_indexer.run(project, cache, full=full)
-        emit(True, rc=0, data=data)
+        import vfp_dbf_export
     except Exception as e:
-        emit(False, stderr="indexer failed: %s" % e, data={"error": str(e)})
+        emit(False, stderr="cannot import vfp_dbf_export: %s" % e)
+    try:
+        schema, schema_file, warnings = vfp_dbf_export.export_schema(input_path, out_dir)
+        if schema:
+            emit(True, rc=0,
+                 table=schema.get("table"),
+                 schemaFile=schema_file,
+                 recordCount=schema.get("recordCount", 0),
+                 fieldCount=schema.get("fieldCount", 0),
+                 hasMemo=schema.get("hasMemo", False),
+                 codePage=schema.get("codePage"),
+                 reader=schema.get("reader", "dbfread"),
+                 warnings=warnings,
+                 data={"schemaFile": schema_file, "fields": schema.get("fields", [])})
+        else:
+            emit(False, stderr="; ".join(warnings))
+    except Exception as e:
+        emit(False, stderr="dbf_schema failed: %s" % e)
+
+
+def run_dbf_data(input_path, out_dir, fmt, deleted):
+    sys.path.insert(0, HERE)
+    try:
+        import vfp_dbf_export
+    except Exception as e:
+        emit(False, stderr="cannot import vfp_dbf_export: %s" % e)
+    try:
+        count, data_file, warnings = vfp_dbf_export.export_data(input_path, out_dir, fmt, deleted)
+        if data_file:
+            emit(True, rc=0,
+                 table=os.path.splitext(os.path.basename(input_path))[0].upper(),
+                 dataFile=data_file,
+                 recordCount=count,
+                 format=fmt,
+                 warnings=warnings)
+        else:
+            emit(False, stderr="; ".join(warnings))
+    except Exception as e:
+        emit(False, stderr="dbf_data failed: %s" % e)
+
+
+def run_dbf_list(dbf_dir):
+    sys.path.insert(0, HERE)
+    try:
+        import vfp_dbf_export
+    except Exception as e:
+        emit(False, stderr="cannot import vfp_dbf_export: %s" % e)
+    try:
+        results = vfp_dbf_export.list_dbf(dbf_dir)
+        emit(True, rc=0, data={"tables": results, "count": len(results)})
+    except Exception as e:
+        emit(False, stderr="dbf_list failed: %s" % e)
 
 
 def main():
@@ -205,6 +274,20 @@ def main():
     pi.add_argument("--cache", required=True)
     pi.add_argument("--full", action="store_true")
 
+    ps = sub.add_parser("dbf_schema", help="Export DBF file schema to JSON (no VFP9 needed)")
+    ps.add_argument("--input", required=True, help="Path to .dbf file")
+    ps.add_argument("--out", required=True, help="Output directory for _schema.json")
+
+    pd = sub.add_parser("dbf_data", help="Export DBF record data to JSONL/CSV (no VFP9 needed)")
+    pd.add_argument("--input", required=True, help="Path to .dbf file")
+    pd.add_argument("--out", required=True, help="Output directory")
+    pd.add_argument("--format", default="jsonl", choices=["jsonl", "csv"], help="Output format")
+    pd.add_argument("--deleted", default="skip", choices=["skip", "separate", "include"],
+                    help="Deleted record handling")
+
+    pl = sub.add_parser("dbf_list", help="List all DBF files in a directory tree (no VFP9 needed)")
+    pl.add_argument("--dir", required=True, help="Directory to scan")
+
     a = ap.parse_args()
     if a.cmd == "verno":
         run_verno(a.prg)
@@ -214,6 +297,12 @@ def main():
         run_convert_dir(a.project, a.out, a.cfg, a.prg, a.timeout)
     elif a.cmd == "index":
         run_index(a.project, a.cache, a.full)
+    elif a.cmd == "dbf_schema":
+        run_dbf_schema(a.input, a.out)
+    elif a.cmd == "dbf_data":
+        run_dbf_data(a.input, a.out, a.format, a.deleted)
+    elif a.cmd == "dbf_list":
+        run_dbf_list(a.dir)
 
 
 if __name__ == "__main__":

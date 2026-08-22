@@ -486,3 +486,67 @@ export const vfp_trace = tool({
     return { className: args.className, chain, complete: chain.length > 0 && chain[chain.length - 1]["baseClass"] === "(not found in index)" }
   },
 })
+
+export const vfp_export_table = tool({
+  description:
+    "Export DBF table schema (fields, types, codepage) and optionally data to JSONL/CSV using pure-Python dbfread — NO VFP9 required.",
+  args: {
+    input: tool.schema.string().describe("Path to the .dbf file."),
+    format: tool.schema.string().optional().describe("Optional data export format: 'jsonl' or 'csv'. If omitted, only schema is exported."),
+    deleted: tool.schema.string().optional().describe("Deleted record handling: 'skip' (default), 'separate', or 'include'."),
+    out: tool.schema.string().optional().describe("Output directory. Defaults to <project>/.vfp-ai/dbf."),
+  },
+  async execute(args, context) {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error("Cannot read config.json at " + CONFIG)
+    const dir = context.worktree || process.cwd()
+    const cacheDir = args.out || join(dir, cfg.cacheDirectory || ".vfp-ai", "dbf")
+
+    const p = Bun.spawn(
+      [py, DRIVER, "dbf_schema", "--input", args.input, "--out", cacheDir],
+      { stdout: "pipe", stderr: "pipe" }
+    )
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `dbf_schema exit ${rc}`)
+    const schemaResult = JSON.parse(out.trim())
+
+    if (args.format) {
+      const p2 = Bun.spawn(
+        [py, DRIVER, "dbf_data", "--input", args.input, "--out", cacheDir,
+         "--format", args.format, "--deleted", args.deleted || "skip"],
+        { stdout: "pipe", stderr: "pipe" }
+      )
+      const out2 = await new Response(p2.stdout).text()
+      const err2 = await new Response(p2.stderr).text()
+      const rc2 = await p2.exited
+      if (rc2 !== 0) throw new Error(err2 || `dbf_data exit ${rc2}`)
+      const dataResult = JSON.parse(out2.trim())
+      return { schema: schemaResult, data: dataResult }
+    }
+
+    return { schema: schemaResult }
+  },
+})
+
+export const vfp_list_tables = tool({
+  description:
+    "List all DBF tables in a directory tree with field counts, record counts, and memo presence. Pure Python — NO VFP9 required.",
+  args: {
+    directory: tool.schema.string().optional().describe("Project root to scan. Defaults to current worktree."),
+  },
+  async execute(args, context) {
+    const dir = args.directory || context.worktree || process.cwd()
+
+    const p = Bun.spawn(
+      [py, DRIVER, "dbf_list", "--dir", dir],
+      { stdout: "pipe", stderr: "pipe" }
+    )
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `dbf_list exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})

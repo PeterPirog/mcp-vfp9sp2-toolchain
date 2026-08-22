@@ -182,8 +182,21 @@ def main():
     else:
         print("[WARN] %s" % com_msg)
     if not vfp9 and not com_ok:
-        print("       VFP9 is REQUIRED for conversion. Install VFP9 or set VFP9_EXE.")
+        print("       VFP9 is REQUIRED for BIN2PRG conversion (FoxBin2Prg). Install VFP9 or set VFP9_EXE.")
+        print("       BUT: DBF schema/data export works WITHOUT VFP9 using pure Python!")
         print("       Indexing/search tools work without VFP9 on existing .sc2/.vc2 files.")
+        print("       DBF export tools (vfp_export_table, vfp_list_tables) also work without VFP9.")
+    print()
+
+    # 2b. dbfread (optional Python dependency for DBF export)
+    dbfread_ok = False
+    try:
+        import dbfread
+        dbfread_ok = True
+        print("[OK] dbfread %s found — best DBF field type parsing" % dbfread.__version__)
+    except ImportError:
+        print("[INFO] dbfread not installed — a built-in minimal DBF reader will be used as fallback.")
+        print("       Install for better results:  py -m pip install dbfread")
     print()
 
     # 3. Symlink tools
@@ -234,9 +247,25 @@ def main():
             print("[OK] Toolchain verified successfully!")
         else:
             print("[FAIL] Verification failed (rc=%d)" % result.returncode)
+
+    # 6b. Verify DBF export (works without VFP9)
+    if a.verify:
+        print()
+        print("--- DBF Export Check (no VFP9 required) ---")
+        env2 = os.environ.copy()
+        env2["VFP_TOOLCHAIN_HOME"] = toolchain
+        result2 = subprocess.run(
+            [sys.executable or "py", driver, "dbf_list", "--dir", toolchain],
+            capture_output=True, text=True, env=env2, timeout=30
+        )
+        if result2.returncode == 0:
+            print("[OK] DBF export tools (pure Python) are functional")
+        else:
+            print("[WARN] DBF export tools check failed")
     elif a.verify and not (vfp9 and fbdir):
         print()
-        print("Skipping verification (VFP9 or FoxBin2Prg not found)")
+        print("Skipping BIN2PRG verification (VFP9 or FoxBin2Prg not found)")
+        print("       DBF export tools do NOT need VFP9 — check vfp_list_tables manually.")
 
     print()
     print("To complete setup, add to your shell profile:")
