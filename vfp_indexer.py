@@ -182,7 +182,7 @@ def sha256_file(path):
 # ---------------------------------------------------------------------------
 
 VFP_EXTENSIONS = (".prg", ".h", ".sct", ".sc2", ".vc2", ".fr2", ".mn2",
-                  ".dc2", ".lb2", ".pjx", ".pjt", ".pj2")
+                   ".dc2", ".lb2", ".db2", ".pjx", ".pjt", ".pj2")
 
 VFP_BINARY_EXTS = (".prg", ".h", ".sc2", ".vc2", ".fr2", ".mn2",
                    ".dc2", ".lb2", ".pjx", ".pjt", ".pj2", ".dbc")
@@ -226,7 +226,7 @@ def scan_project(project, cache_dir, full=False):
                 "type": ext,
             }
 
-            # If we have an SC2/VC2 file, parse it for symbols
+            # If we have an SC2/VC2/PJ2 file, parse it for symbols
             if ext in (".sc2", ".vc2", ".pjx", ".pjt", ".pj2") and full:
                 parsed = parse_sc2(fp)
                 if parsed:

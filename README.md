@@ -427,14 +427,64 @@ Key settings:
 
 ---
 
+## Complete Rewrite Feasibility
+
+**Can you rewrite the entire application from this toolchain's output?** 
+
+**Partially yes** — for the **code/logic layer**. **No** for the **data layer**.
+
+### What IS captured (sufficient for code rewrite)
+
+| Component | Source Files | What's captured |
+|---|---|---|
+| **Form classes** | `.scx` → `.sc2` (840 files) | ✅ Full class definition, all 6,233 methods with code, 6,262 properties with values, all controls (ADD OBJECT trees) |
+| **Class libraries** | `.vcx` → `.vc2` (41 files) | ✅ Full class hierarchy, 530 methods with code, all properties |
+| **Reports** | `.frx` → `.fr2` (65 files) | ✅ Report structure, fields, groups |
+| **Projects** | `.pjx` → `.pj2` (8 files) | ✅ Project file lists, main program, file types (K=Form, P=PRG, D=DBF) |
+| **Tables** | `.dbf` → `.db2` | ⚠️ Structure captured (field names/types), but DB2 generation to cache has issues (see below) |
+| **PRG files** | `.prg` (14 files in PJX) | ⚠️ Referenced in PJ2 but NOT converted to cache (they're already text) |
+
+**Total captured for code rewrite:**
+- 599 classes with full inheritance chains
+- 8,168 methods with **complete implementations** (PROCEDURE...ENDPROC code)
+- 6,262 properties with all default values
+- Full form layouts (control positions, bindings, event handlers)
+- Table references (USE/SELECT statements in code)
+- Project structure (what files belong to what project, main entry point)
+
+### What is NOT captured (additional work needed)
+
+| Missing | Why | For rewrite: |
+|---|---|---|
+| **DBF table data** | Data records, not structure | Need separate data migration/export |
+| **CDX index structure** | Binary index files, not converted | Recreate index strategy manually |
+| **DBC database containers** | Not fully parsed (constraints, relationships) | Extract separately with DBC tools |
+| **PRG source files** | Not copied to `.vfp-ai/source/` cache | Copy manually or enhance sync |
+| **DB2 table structure** | `cOutputFolder` doesn't redirect DBF output | DB2 files go to source dir, not cache |
+
+### For a complete application rewrite, you need:
+
+1. **This toolchain's output** → provides all class/method/property code ✅
+2. **Separate DBF data export** → table records (DBF tools, not this repo)
+3. **DBC schema export** → table relationships and constraints
+4. **PRG file analysis** → copy PRG files to cache or search source project
+
+### Recommendation
+
+Use this toolchain to reverse-engineer the **application logic** (forms, classes, methods). Then supplement with database tools for the **data layer** (tables, relationships, data).
+
+---
+
 ## Tested
 
 Verified on `D:\Logis_projekt\logis_bok_4` (1,218 binary files):
 - 631/633 files converted successfully (2 failures: missing .CDX files)
-- 946 text files generated in `.vfp-ai/source/`
+- 946 text files generated in `.vfp-ai/source/` (840 SC2, 65 FR2, 41 VC2, 8 PJ2)
 - 0 source files modified (SHA256/size/mtime verified unchanged)
-- Index: 599 classes, 8,168 methods across 954 text files
-- `cOutputFolder` correctly redirects all output to cache
+- Index: 599 classes, 8,168 methods with full code, 6,262 properties
+- `cOutputFolder` correctly redirects SC2/VC2/FR2 output to cache
+
+Note: DBF→DB2 conversion returns `RC=0` but does NOT create `.db2` in cache (`cOutputFolder` does not redirect DBF output in FoxBin2Prg). Pre-existing `.db2` files exist in source directory from prior runs.
 
 ## Limitations
 
@@ -442,6 +492,8 @@ Verified on `D:\Logis_projekt\logis_bok_4` (1,218 binary files):
 2. **Requires VFP9 installed**: No standalone FoxBin2Prg.exe exists; the VFP9 COM automation host is required
 3. **DBF without CDX**: Files missing structural CDX will fail conversion (rc != 0)
 4. **Large projects**: Full sync of 600+ files takes ~5 minutes (VFP9 COM startup per file)
+5. **DB2 cache issue**: DBF→DB2 conversion returns `RC=0` but does not create `.db2` in cache (`cOutputFolder` does not redirect DBF output in FoxBin2Prg). Table structure can be obtained by running conversion without `cOutputFolder` or using FoxBin2Prg's standalone DBF tools.
+6. **PRG files**: Not automatically copied to `.vfp-ai/source/`. Only referenced in PJ2 project files. To search PRG code, either copy them to the cache or use `vfp_find_references` on the source project directory directly.
 
 ## Credits
 
