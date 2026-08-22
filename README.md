@@ -170,6 +170,80 @@ export VFP_FOXBIN2PRG_DIR="/path/to/foxbin2prg"
 
 ---
 
+## 🚀 For Warp Terminal Users
+
+[Warp](https://warp.dev) is a modern terminal emulator with AI assistance. This toolchain works seamlessly inside Warp.
+
+### Setting Environment Variables in Warp
+
+#### Windows (PowerShell)
+
+Create or edit `C:\Users\<you>\.env` (Warp reads this automatically):
+
+```powershell
+VFP_TOOLCHAIN_HOME=C:\path\to\vfp-integration-toolchain
+VFP_FOXBIN2PRG_DIR=C:\path\to\foxbin2prg
+VFP9_EXE=C:\Program Files (x86)\Microsoft Visual FoxPro 9\vfp9.exe
+```
+
+Or via PowerShell profile (`$PROFILE`):
+```powershell
+$env:VFP_TOOLCHAIN_HOME = "C:\path\to\vfp-integration-toolchain"
+$env:VFP_FOXBIN2PRG_DIR = "C:\path\to\foxbin2prg"
+```
+
+#### macOS
+
+Add to `~/.zshrc` or `~/.env.local`:
+```bash
+export VFP_TOOLCHAIN_HOME="/path/to/vfp-integration-toolchain"
+export VFP_FOXBIN2PRG_DIR="/path/to/foxbin2prg"
+export VFP9_EXE="/path/to/vfp9.exe"
+```
+
+### Running OpenCode in Warp
+
+```bash
+# Navigate to your VFP project directory
+cd D:\Projects\MyVfpProject
+
+# Start OpenCode (Ctrl+O or just type 'opencode')
+opencode
+
+# Inside OpenCode, use the tools:
+opencode vfp_status
+opencode vfp_sync --full
+opencode vfp_find_symbol --query "MyForm"
+
+# Or use the agent:
+opencode @vfp-analyst "analyze this project"
+```
+
+### Warp Workflows (Optional)
+
+Save common commands as Warp Workflows (Ctrl+Shift+W):
+
+| Workflow Name | Command |
+|---|---|
+| `VFP Sync` | `py vfp_driver.py convert_dir --project %DIR% --out .vfp-ai --cfg FoxBin2Prg-AI.cfg --prg tools/foxbin2prg/foxbin2prg.prg` |
+| `VFP Index` | `py vfp_driver.py index --project .vfp-ai/source --cache .vfp-ai --full` |
+| `VFP Status` | `py vfp_driver.py verno --prg tools/foxbin2prg/foxbin2prg.prg` |
+
+### Warp AI vs OpenCode AI
+
+- **Warp AI** (Ctrl+L): General terminal AI, runs commands for you
+- **OpenCode** (Ctrl+O): Project-aware agent, understands codebase context
+
+For VFP work, use **OpenCode** — the `@vfp-analyst` agent has domain-specific knowledge about VFP projects, FoxBin2Prg output format, and the 11 tools in this repo.
+
+### Windows + Warp Specific Note
+
+VFP9 is **Windows-only**. If you're on macOS with Warp:
+- You need a Windows VM or VM-based VFP9 installation
+- The indexing/search tools (`vfp_find_symbol`, `vfp_trace`) **do NOT need VFP9** — they work on cached `.sc2`/`.vc2` text files
+
+---
+
 ## Repository Structure
 
 ```
