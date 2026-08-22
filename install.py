@@ -69,6 +69,11 @@ def find_foxbin2prg(explicit_dir):
 
 
 def find_vfp9():
+    """Find VFP9 — checks env var, default path, and COM registration.
+
+    Returns the file path if found, or None if not installed.
+    COM auto-detection happens at runtime via CreateObject("VisualFoxPro.Application.9").
+    """
     env = os.environ.get("VFP9_EXE")
     if env and os.path.isfile(env):
         return env
@@ -76,6 +81,44 @@ def find_vfp9():
     if os.path.isfile(default):
         return default
     return None
+
+
+def check_vfp9_com():
+    """Check if VFP9 COM object is registered (runtime detection).
+
+    The toolchain uses CreateObject('VisualFoxPro.Application.9') via VBS.
+    This check verifies the ProgID is registered in the Windows COM registry.
+    """
+    if os.name != "nt":
+        return False, "Windows COM not available (non-Windows platform)"
+
+    # Method 1: Check registry for the ProgID
+    try:
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "VisualFoxPro.Application.9"):
+                return True, "VFP9 COM registered (VisualFoxPro.Application.9)"
+        except FileNotFoundError:
+            pass
+        # Method 2: Try to actually create the COM object (most reliable)
+        import win32com.client
+        win32com.client.Dispatch("VisualFoxPro.Application.9")
+        return True, "VFP9 COM object accessible at runtime"
+    except ImportError:
+        # win32com not available, but registry key might exist
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["powershell", "-Command", "New-Object -ComObject 'VisualFoxPro.Application.9' 2>$null; if ($LASTEXITCODE -eq 0) { Write-Output 'ok' } else { Write-Output 'fail' }"],
+                capture_output=True, text=True, timeout=10
+            )
+            if "ok" in result.stdout:
+                return True, "VFP9 COM object accessible via PowerShell"
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return False, "VFP9 COM NOT registered (install VFP9)"
 
 
 def main():
@@ -125,14 +168,23 @@ def main():
         print("       Or set environment variable: VFP_FOXBIN2PRG_DIR")
         print()
 
-    # 2. VFP9
+    # 2. VFP9 — file path + COM registration
     vfp9 = find_vfp9()
     if vfp9:
-        print("[OK] VFP9 found: %s" % vfp9)
+        print("[OK] VFP9 executable found: %s" % vfp9)
     else:
-        print("[WARN] VFP9 not found at default location.")
+        print("[WARN] VFP9 executable not found at default path.")
         print("       Set VFP9_EXE environment variable to vfp9.exe path.")
-        print()
+    # Check COM registration (how the tool actually finds VFP9 at runtime)
+    com_ok, com_msg = check_vfp9_com()
+    if com_ok:
+        print("[OK] VFP9 COM registered — auto-detected at runtime (no path needed)")
+    else:
+        print("[WARN] %s" % com_msg)
+    if not vfp9 and not com_ok:
+        print("       VFP9 is REQUIRED for conversion. Install VFP9 or set VFP9_EXE.")
+        print("       Indexing/search tools work without VFP9 on existing .sc2/.vc2 files.")
+    print()
 
     # 3. Symlink tools
     tools_dst = os.path.join(opencod, "tools")

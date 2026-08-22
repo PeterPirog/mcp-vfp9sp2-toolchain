@@ -4,7 +4,46 @@ Strict read-only integration between [OpenCode](https://opencode.ai) AI agents a
 
 **No PRG2BIN. No recompilation. No source modification. Ever.**
 
+> **⚠️ VFP 9 is REQUIRED** for file conversion. The tool auto-detects it via COM. You do NOT need to manually specify the path. See [VFP9 Detection](#v9-detection-how-it-works) below.
+
 > **Credits**: This toolchain depends on [FoxBin2Prg](https://github.com/fdbozzo/foxbin2prg) by Fabio Zadro ([fdbozzo](https://github.com/fdbozzo)). FoxBin2Prg is a free, open-source utility that converts between VFP binary files (.scx/.vcx/.frx/etc.) and text. This toolchain wraps it in a strict read-only shell. See [THANKS.md](THANKS.md) for details.
+
+---
+
+## ⚠️ VFP9 Detection — How It Works
+
+**VFP 9 musi być zainstalowane na komputerze** — to wymóg Windows COM. Narzędzie **automatycznie wykrywa** VFP9, nie musisz ręcznie podawać ścieżki.
+
+### Jak to działa?
+
+1. **Auto-detekcja via COM** — nasze VBS skrypty używają `CreateObject("VisualFoxPro.Application.9")` — Windows automatycznie znajduje zarejestrowaną instancję VFP9
+2. **Nie musisz nic konfigurować** — jeśli VFP9 jest zainstalowany, COM registry jest automatycznie ustawiony
+3. **Opcjonalny env var** — możesz ustawić `VFP9_EXE` jeśli masz nie-standardową instalację:
+
+```powershell
+# Windows PowerShell
+$env:VFP9_EXE = "D:\Apps\VFP9\vfp9.exe"
+
+# Linux/macOS (wine)
+export VFP9_EXE="/path/to/vfp9.exe"
+```
+
+4. **Sprawdź w install.py** — instalator automatycznie wykrywa VFP9 i pokaże status
+
+### Co potrzebujesz do instalacji?
+
+| Component | Gdzie wziąć | Czy narzędzie auto-wykryje? |
+|---|---|---|
+| **VFP 9** (vfp9.exe) | Microsoft / Visual Studio subscription | ✅ Tak — via COM |
+| **FoxBin2Prg** (foxbin2prg.prg) | [GitHub: fdbozzo/foxbin2prg](https://github.com/fdbozzo/foxbin2prg) | ✅ Tak — `install.py` szuka w domyślnych lokalizacjach lub `VFP_FOXBIN2PRG_DIR` |
+| **Python 3** | [python.org](https://python.org) | ✅ Tak — `py` albo `python3` w PATH |
+
+### Co się stanie jeśli VFP9 nie jest zainstalowane?
+
+- `vfp_detect` → **działa** (tylko skanuje pliki)
+- `vfp_status` → **pokaże błąd** "VFP9 not found"
+- `vfp_sync` / `vfp_export_*` → **pokaże błąd** "COM object creation failed"
+- `vfp_index` / `vfp_find_symbol` / `vfp_trace` → **działają** ale tylko na istniejących plikach `.sc2`/`.vc2` (bez sync nie ma plików do analizy)
 
 ---
 
