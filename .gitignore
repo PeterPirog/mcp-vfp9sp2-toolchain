@@ -1,0 +1,31 @@
+# VFP Integration Toolchain for OpenCode
+# Strict read-only VFP 9 + FoxBin2Prg integration
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OpenCode cache
+.vfp-ai/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal RAG (operational state, not for distribution)
+INTERNAL_RAG/
+
+# Pre-existing tool junk (not part of toolchain)
+*.db2
+*.err
+
+# Test artifacts
+*.fxp

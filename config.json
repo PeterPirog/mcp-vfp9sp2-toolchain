@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "readOnly": true,
+  "vfp": {
+    "exeEnvironmentVariable": "VFP9_EXE",
+    "exeDefault": "C:\\Program Files (x86)\\Microsoft Visual FoxPro 9\\vfp9.exe"
+  },
+  "foxbin2prg": {
+    "programFile": "foxbin2prg.prg",
+    "directoryEnvironmentVariable": "VFP_FOXBIN2PRG_DIR",
+    "directoryDefault": "tools/foxbin2prg",
+    "upstream": "https://github.com/fdbozzo/foxbin2prg",
+    "timeoutMs": 600000
+  },
+  "aiProfile": {
+    "file": "FoxBin2Prg-AI.cfg",
+    "inhibitInheritance": 3
+  },
+  "cacheDirectory": ".vfp-ai",
+  "classPerFile": 2,
+  "indexer": {
+    "python": "py",
+    "timeoutMs": 300000
+  },
+  "defaultExcludes": [
+    ".git",
+    ".vfp-ai",
+    "backup",
+    "backups",
+    "archive"
+  ],
+  "artifacts": {
+    "bin2prg": ["pjx", "scx", "vcx", "frx", "lbx", "mnx", "dbc", "dbf"],
+    "indexText": ["prg", "h", "pj2", "sc2", "vc2", "fr2", "mn2", "dc2"],
+    "detect": ["prg", "h", "pjx", "pjt", "pj2", "scx", "sct", "sc2", "vcx", "vct", "vc2", "frx", "frt", "fr2", "mnx", "mnt", "mn2", "lbx", "lb2", "dbc", "dct", "dcx", "dc2", "dbf", "fpt", "cdx"]
+  }
+}
