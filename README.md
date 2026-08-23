@@ -31,6 +31,28 @@ Result: an `AUDIT/` directory that is enough to **rebuild the database and every
 without FoxPro and without the original `.scx/.vcx/.dbf` files. See
 [docs/USAGE.md](docs/USAGE.md) for more and [docs/ARTIFACTS.md](docs/ARTIFACTS.md) for output schemas.
 
+### One-Prompt Setup (paste into OpenCode or Warp)
+
+Replace the two placeholders and paste into your AI session:
+
+```
+Set up the VFP Integration Toolchain and run a full audit.
+
+PROJECT_DIR:  C:\path\to\my\foxpro\project
+AUDIT_DIR:    C:\path\to\where\you\want\the\audit\output
+
+Steps (do them in order, stop and report on any failure):
+1. Detect VFP artifacts:      vfp_detect --directory <PROJECT_DIR>
+2. Sync (BIN2PRG, needs VFP9): vfp_sync  --directory <PROJECT_DIR>
+3. Full audit (schema + forms + full DBF data):
+   vfp_audit --source <PROJECT_DIR> --out <AUDIT_DIR> --include-data
+4. Summarise what was generated (table count, form count, data size,
+   any warnings) and list the top 5 largest tables by record count.
+```
+
+That's it. After step 3 the `AUDIT_DIR` folder is self-contained — you can
+rebuild the database and every form from it without FoxPro.
+
 ---
 
 ## ⚠️ VFP9 Detection — How It Works
