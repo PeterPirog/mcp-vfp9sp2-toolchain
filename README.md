@@ -8,17 +8,40 @@ Strict read-only integration between [OpenCode](https://opencode.ai) AI agents a
 
 > **Credits**: This toolchain depends on [FoxBin2Prg](https://github.com/fdbozzo/foxbin2prg) by Fabio Zadro ([fdbozzo](https://github.com/fdbozzo)). FoxBin2Prg is a free, open-source utility that converts between VFP binary files (.scx/.vcx/.frx/etc.) and text. This toolchain wraps it in a strict read-only shell. See [THANKS.md](THANKS.md) for details.
 
+## Quick Start
+
+```bash
+# 1. Install (symlinks the tools into ~/.config/opencode)
+git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
+cd vfp-integration-toolchain
+py -m pip install dbfread orjson xlsxwriter openpyxl dbf   # optional: polars
+py install.py --foxbin2prg-dir "C:\path\to\foxbin2prg"
+
+# 2. In any VFP project (OpenCode):
+opencode vfp_detect   --directory .
+opencode vfp_sync     --directory .          # needs VFP9; builds .vfp-ai cache
+opencode vfp_audit    --source . --out AUDIT # self-contained: schema + forms + data
+
+# 3. Or without OpenCode, straight from the CLI:
+py vfp_driver.py --version
+py vfp_driver.py audit --source . --out AUDIT
+```
+
+Result: an `AUDIT/` directory that is enough to **rebuild the database and every form**
+without FoxPro and without the original `.scx/.vcx/.dbf` files. See
+[docs/USAGE.md](docs/USAGE.md) for more and [docs/ARTIFACTS.md](docs/ARTIFACTS.md) for output schemas.
+
 ---
 
 ## ⚠️ VFP9 Detection — How It Works
 
-**VFP 9 musi być zainstalowane na komputerze** — to wymóg Windows COM. Narzędzie **automatycznie wykrywa** VFP9, nie musisz ręcznie podawać ścieżki.
+**VFP 9 must be installed on the machine** — this is a Windows COM requirement. The toolchain **auto-detects** VFP9, you do NOT need to specify the path manually.
 
-### Jak to działa?
+### How it works
 
-1. **Auto-detekcja via COM** — nasze VBS skrypty używają `CreateObject("VisualFoxPro.Application.9")` — Windows automatycznie znajduje zarejestrowaną instancję VFP9
-2. **Nie musisz nic konfigurować** — jeśli VFP9 jest zainstalowany, COM registry jest automatycznie ustawiony
-3. **Opcjonalny env var** — możesz ustawić `VFP9_EXE` jeśli masz nie-standardową instalację:
+1. **Auto-detection via COM** — our VBS scripts use `CreateObject("VisualFoxPro.Application.9")` — Windows automatically finds the registered VFP9 instance
+2. **No configuration needed** — if VFP9 is installed, the COM registry entry is already in place
+3. **Optional env var** — set `VFP9_EXE` if you have a non-standard install:
 
 ```powershell
 # Windows PowerShell
@@ -28,23 +51,23 @@ $env:VFP9_EXE = "D:\Apps\VFP9\vfp9.exe"
 export VFP9_EXE="/path/to/vfp9.exe"
 ```
 
-4. **Sprawdź w install.py** — instalator automatycznie wykrywa VFP9 i pokaże status
+4. **`install.py` checks for you** — the installer auto-detects VFP9 and prints its status
 
-### Co potrzebujesz do instalacji?
+### What you need to install
 
-| Component | Gdzie wziąć | Czy narzędzie auto-wykryje? |
+| Component | Where to get it | Does the toolchain auto-detect? |
 |---|---|---|
-| **VFP 9** (vfp9.exe) | Microsoft / Visual Studio subscription | ✅ Tak — via COM |
-| **FoxBin2Prg** (foxbin2prg.prg) | [GitHub: fdbozzo/foxbin2prg](https://github.com/fdbozzo/foxbin2prg) | ✅ Tak — `install.py` szuka w domyślnych lokalizacjach lub `VFP_FOXBIN2PRG_DIR` |
-| **Python 3** | [python.org](https://python.org) | ✅ Tak — `py` albo `python3` w PATH |
+| **VFP 9** (vfp9.exe) | Microsoft / Visual Studio subscription | ✅ Yes — via COM |
+| **FoxBin2Prg** (foxbin2prg.prg) | [GitHub: fdbozzo/foxbin2prg](https://github.com/fdbozzo/foxbin2prg) | ✅ Yes — `install.py` searches default locations or `VFP_FOXBIN2PRG_DIR` |
+| **Python 3** | [python.org](https://python.org) | ✅ Yes — `py` or `python3` in PATH |
 
-### Co się stanie jeśli VFP9 nie jest zainstalowane?
+### What happens if VFP9 is NOT installed?
 
-- `vfp_detect` → **działa** (tylko skanuje pliki)
-- `vfp_status` → **pokaże błąd** "VFP9 not found"
-- `vfp_sync` / `vfp_export_*` → **pokaże błąd** "COM object creation failed"
-- `vfp_index` / `vfp_find_symbol` / `vfp_trace` → **działają** ale tylko na istniejących plikach `.sc2`/`.vc2` (bez sync nie ma plików do analizy)
-- `vfp_export_table` / `vfp_list_tables` → **działają** bez VFP9! Czytaszą pliki DBF bezpośrednio w Pythonie
+- `vfp_detect` → **works** (only scans files)
+- `vfp_status` → **shows an error** "VFP9 not found"
+- `vfp_sync` / `vfp_export_*` → **shows an error** "COM object creation failed"
+- `vfp_index` / `vfp_find_symbol` / `vfp_trace` → **work** but only on existing `.sc2`/`.vc2` files (without sync there is nothing to index)
+- `vfp_export_table` / `vfp_list_tables` / `vfp_export_dir` → **work without VFP9!** They read DBF files directly in Python
 
 ---
 
@@ -69,9 +92,9 @@ opencode vfp_find_symbol     # "Find class 'myBaseForm'"
 
 ### What is "@vfp-analyst"?
 
-An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 13 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
+An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 15 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
 
-### 14 Tools This Repo Provides
+### 15 Tools This Repo Provides
 
 | Tool | What it does | VFP9 required? |
 |---|---|---|
@@ -88,31 +111,16 @@ An **agent** is a pre-configured persona. Place `.md` files in `~/.config/openco
 | `vfp_trace` | Follows a class's inheritance chain (MyClass → Form → Container → Object) | ❌ No |
 | `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python, no VFP9) | ❌ No |
 | `vfp_list_tables` | Lists all DBF tables in a directory tree with field/record counts | ❌ No |
+| `vfp_export_dir` | Batch-export a whole directory tree of DBF tables (schema + data, memo/FPT) — no VFP9 | ❌ No |
 | `vfp_audit` | Comprehensive audit: sync + DBF schema + table relationships + class analysis → target directory | ⚠️ Partial |
 
 ---
 
-## Quick Start
+## Full Walkthrough
 
-```bash
-# 1. Clone and install
-git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
-cd vfp-integration-toolchain
-
-# 2. Run the installer (needs FoxBin2Prg directory)
-py install.py --foxbin2prg-dir "C:\path\to\foxbin2prg"
-
-# 3. Set environment variable (install.py prints the command)
-# Windows PowerShell:
-$env:VFP_TOOLCHAIN_HOME = "C:\path\to\vfp-integration-toolchain"
-# Linux/macOS:
-export VFP_TOOLCHAIN_HOME="/path/to/vfp-integration-toolchain"
-
-# 4. Use in ANY OpenCode session targeting a VFP project
-opencode vfp_detect
-opencode vfp_sync --full
-opencode vfp_find_symbol --query "MyForm"
-```
+> Install, every tool, audit options and the CLI reference live in
+> **[docs/USAGE.md](docs/USAGE.md)**. The 3-step version is in the
+> [Quick Start](#quick-start) section above.
 
 ---
 
@@ -125,7 +133,13 @@ opencode vfp_find_symbol --query "MyForm"
 | **VFP 9** | Installed at default path (`C:\Program Files (x86)\Microsoft Visual FoxPro 9\vfp9.exe`) or set `VFP9_EXE` env var. **Not needed** for DBF export tools (see below) |
 | **Python 3** | Accessible as `py` (Windows) or `python3` (Linux/macOS) |
 | **FoxBin2Prg** | [Download from GitHub](https://github.com/fdbozzo/foxbin2prg) — place `foxbin2prg.prg` somewhere on disk. **Not needed** for DBF schema/data export |
-| **dbfread** (optional) | `pip install dbfread` — provides better DBF field type parsing. If not installed, a built-in minimal DBF reader is used as fallback |
+| **dbfbridge** (bundled) | **Vendored in this repo** at `tools/dbfbridge/` (upstream: [dbfbridge](https://github.com/PeterPirog/dbfbridge), pinned commit in `tools/dbfbridge/VERSION.txt`). Full DBF/FPT support: inline memo (FPT), batch export, JSONL/CSV/JSON/XLSX, validation, Polish cp1250/cp852/Mazovia encoding fallback. Loaded from the repo — **no pip install needed** |
+| **dbfread** (runtime dep) | `pip install dbfread` — streaming DBF/FPT reader used by dbfbridge and by the fallback path. Installed as a pip dependency |
+| *(neither)* | A built-in minimal DBF reader is used as a last resort (schema + non-memo data, no FPT) |
+
+> The vendored copy is a frozen snapshot so this toolchain is **not affected** if the upstream
+> `dbfbridge` repo evolves or changes API. To refresh it, re-copy from a fresh upstream clone
+> and update `tools/dbfbridge/VERSION.txt` (commit + sha256 manifest).
 
 ### One-Step Install
 
@@ -133,8 +147,10 @@ opencode vfp_find_symbol --query "MyForm"
 git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
 cd vfp-integration-toolchain
 
-# Optional: install dbfread for better DBF field type parsing
-pip install dbfread  # or: py -m pip install dbfread
+# Install dbfbridge's runtime dependencies (dbfbridge itself is bundled, not pip-installed)
+# `polars` is OPTIONAL (fast CSV path only) — omit it to keep installs light
+py -m pip install dbfread orjson xlsxwriter openpyxl dbf
+# Optional (only speeds up CSV export): py -m pip install polars
 
 # Run the installer (needs FoxBin2Prg directory for BIN2PRG tools)
 py install.py --foxbin2prg-dir "C:\path\to\foxbin2prg"
@@ -245,13 +261,14 @@ Save common commands as Warp Workflows (Ctrl+Shift+W):
 | `VFP DBF Schema` | `py vfp_driver.py dbf_schema --input %DBF_FILE% --out .vfp-ai/dbf` |
 | `VFP DBF Data` | `py vfp_driver.py dbf_data --input %DBF_FILE% --out .vfp-ai/dbf --format jsonl --deleted include` |
 | `VFP List Tables` | `py vfp_driver.py dbf_list --dir %DIR%` |
+| `VFP DBF Batch` | `py vfp_driver.py dbf_dir --source %DIR% --out .vfp-ai\dbf --formats jsonl` |
 
 ### Warp AI vs OpenCode AI
 
 - **Warp AI** (Ctrl+L): General terminal AI, runs commands for you
 - **OpenCode** (Ctrl+O): Project-aware agent, understands codebase context
 
-For VFP work, use **OpenCode** — the `@vfp-analyst` agent has domain-specific knowledge about VFP projects, FoxBin2Prg output format, and the 13 tools in this repo.
+For VFP work, use **OpenCode** — the `@vfp-analyst` agent has domain-specific knowledge about VFP projects, FoxBin2Prg output format, and the 15 tools in this repo.
 
 ### Windows + Warp Specific Note
 
@@ -267,9 +284,10 @@ VFP9 is **Windows-only**. If you're on macOS with Warp:
 ```
 vfp-integration-toolchain/
 ├── README.md              ← This file
-├── THANKS.md              ← Attributions (Fabio Zadro / FoxBin2Prg, dbfbridge / dbfread)
+├── LICENSE                ← MIT license
+├── THANKS.md              ← Attributions (FoxBin2Prg, dbfbridge, dbfread)
 ├── install.py             ← One-step installer (symlinks + verify)
-├── requirements.txt       ← Optional Python dependencies (dbfread)
+├── requirements.txt       ← Python dependencies (dbfread, etc.)
 ├── .gitignore
 ├── config.json            ← Portable VFP/FoxBin2Prg config (schema v2)
 ├── FoxBin2Prg-AI.cfg      ← Strict read-only AI profile
@@ -277,10 +295,21 @@ vfp-integration-toolchain/
 ├── vfp_dbf_export.py      ← Pure-Python DBF schema + data export (no VFP9)
 ├── vfp_audit.py           ← Comprehensive project auditor
 ├── vfp_convert.vbs        ← VBS driver for BIN2PRG (17-param execute())
+├── vfp_common.py          ← Shared constants (canonical exclusion list)
 ├── vfp_indexer.py         ← SC2/VC2 parser → JSON symbol index
 ├── vfp_verno.vbs          ← VBS driver for version check
 ├── tools/
-│   └── vfp.ts             ← 14 OpenCode custom tools (TypeScript)
+│   ├── vfp.ts             ← 15 OpenCode custom tools (TypeScript)
+│   └── dbfbridge/         ← Vendored DBF backend (frozen snapshot, see VERSION.txt)
+├── docs/
+│   ├── USAGE.md           ← Practical usage, CLI reference, audit options
+│   └── ARTIFACTS.md       ← Schema of every audit output file
+├── tests/
+│   ├── test_common.py     ← Unit tests (vfp_common)
+│   └── test_audit.py      ← Unit tests (VFPProjectAuditor helpers)
+├── .github/
+│   ├── ISSUE_TEMPLATE/    ← Bug report + feature request templates
+│   └── pull_request_template.md
 └── agents/
     └── vfp-analyst.md     ← @vfp-analyst agent
 ```
@@ -338,22 +367,33 @@ The `vfp_audit` tool consolidates everything into a single output directory:
 
 ```bash
 # Full audit (needs VFP9 for BIN2PRG, DBF schema export works without)
-opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit"
+opencode vfp_audit --source <project> --out <audit_output>
 
 # Audit without VFP9 (schema + relationships only, uses existing cache)
-opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit" --skip-sync
+opencode vfp_audit --source <project> --out <audit_output> --skip-sync
 
-# Comprehensive audit with data export (JSONL + CSV)
-opencode vfp_audit --source "D:\Logis_projekt\logis_bok_4" --out "D:\Logis_audit" --include-data --data-formats jsonl,csv
+# OPTIONAL / SLOW: audit + FULL DBF DATA export (reads every table's contents incl. memo/FPT)
+# Data lands in <audit_output>/dbf, mirroring the project's folder structure.
+# This is the most time-consuming / disk-heavy mode — only use when you need the data itself.
+opencode vfp_audit --source <project> --out <audit_output> --include-data --data-formats jsonl,csv
+
+# Limit the data export to the N largest tables (0 = all)
+opencode vfp_audit --source <project> --out <audit_output> --include-data --max-tables 20
+
+# Full audit including form/class code (DEFAULT ON, no extra flag needed;
+# use --no-include-forms to skip)
+opencode vfp_audit --source <project> --out <audit_output>
 ```
 
 **What gets generated in the output directory:**
 - `audit_report.md` — Human-readable Markdown summary
+- `data_export.json` — What the optional data export did (dir, tables, formats)
 - `project_summary.json` — File inventory, class/method counts
 - `database_schema.json` — All DBF table schemas with encodings, fields, types
 - `table_relationships.json` — Table usage patterns, SQL SELECT/INSERT/REPLACE, inferred joins
 - `class_analysis.json` — Class hierarchy, inheritance depth, complexity ranking
-- `dbf/` — Individual `<table>_schema.json` files for each DBF
+- `forms/` — full source of every form/class/method + PRG scripts (ON by default; `--no-include-forms` to skip)
+- `dbf/` — individual `<table>_schema.json` files for each DBF; **with `--include-data`** also the full JSONL table contents (incl. memo), mirroring the project tree
 
 ### Via @vfp-analyst Agent
 
@@ -412,7 +452,8 @@ py vfp_driver.py index --project ".vfp-ai/source" --cache ".vfp-ai" --full
 │    ├── index  →  vfp_indexer.py →  parse .sc2/.vc2 → index   │
 │    ├── dbf_schema → vfp_dbf_export.py → dbfread (no VFP9)    │
 │    ├── dbf_data   → vfp_dbf_export.py → dbfread (no VFP9)    │
-│    └── dbf_list   → vfp_dbf_export.py → dbfread (no VFP9)    │
+│    ├── dbf_list   → vfp_dbf_export.py → dbfread (no VFP9)    │
+│    └── dbf_dir    → vfp_dbf_export.py → dbfbridge batch      │
 ├─────────────────────────────────────────────────────────────┤
 │  vfp_convert.vbs (VBS)                                       │
 │    1. Create VisualFoxPro.Application.9 COM object          │
@@ -447,6 +488,7 @@ All paths are environment-variable driven — no hardcoded user paths:
 ```json
 {
   "schemaVersion": 2,
+  "version": "0.2.0",
   "readOnly": true,
   "vfp": {
     "exeEnvironmentVariable": "VFP9_EXE",
@@ -464,9 +506,13 @@ All paths are environment-variable driven — no hardcoded user paths:
     "inhibitInheritance": 3
   },
   "cacheDirectory": ".vfp-ai",
-  "classPerFile": 2
+  "defaultExcludes": [".git", ".vfp-ai", "backup", "backups", "archive", "tmp", "node_modules", "__pycache__"]
 }
 ```
+
+> `defaultExcludes` is the **single source of truth** for directory exclusion
+> during sync and audit. `vfp_common.default_excludes()` (Python) and
+> `excludeDirs()` in `tools/vfp.ts` both read it, so all walks stay consistent.
 
 ### FoxBin2Prg-AI.cfg
 
@@ -492,9 +538,14 @@ Key settings:
 
 ## Complete Rewrite Feasibility
 
-**Can you rewrite the entire application from this toolchain's output?** 
+**Can you rewrite the entire application from this toolchain's output?**
 
-**Partially yes** — for the **code/logic layer**. **No** for the **data layer** (table records).
+**Yes — for both the code/logic layer AND the data layer.**
+
+- **Code/logic** (forms, classes, methods, button handlers): captured by `vfp_sync` (converted `.sc2`/`.vc2`/`.fr2` text) and, with `--include-forms` (default on), shipped self-contained in `<audit_output>/forms/`.
+- **Data** (table schemas + full record contents incl. memo/FPT): captured by `vfp_export_table` and, with `--include-data`, shipped in `<audit_output>/dbf/`.
+
+Run `vfp_audit --include-data --include-forms` once and the resulting directory is enough to **rebuild the database and every form** without FoxPro and without the original binaries.
 
 ### What IS captured (sufficient for code rewrite)
 
@@ -506,7 +557,8 @@ Key settings:
 | **Projects** | `.pjx` → `.pj2` (8 files) | ✅ Project file lists, main program, file types (K=Form, P=PRG, D=DBF) |
 | **Table structure** | `.dbf` → schema via `vfp_export_table` (pure Python, no VFP9) | ✅ Field names, types, lengths, decimals, codepage, record count, memo presence |
 | **Table data** | `.dbf` data via `vfp_export_table --format jsonl` | ✅ Full record data export to JSONL/CSV (pure Python, no VFP9) |
-| **PRG files** | `.prg` (14 files in PJX) | ⚠️ Referenced in PJ2 but NOT converted to cache (they're already text) |
+| **Form/class code** | `.sc2`/`.vc2`/`.fr2` + `.prg` → `<audit>/forms/` via `--include-forms` (default on) | ✅ Self-contained full source of every form, class, method and button handler |
+| **PRG files** | `.prg` (copied into `<audit>/forms/` by `--include-forms`) | ✅ Copied to the audit (already text) |
 
 **Total captured for code rewrite:**
 - 599 classes with full inheritance chains
@@ -524,21 +576,23 @@ Key settings:
 |---|---|---|
 | **CDX index structure** | Binary index files, not converted | Recreate index strategy manually |
 | **DBC database containers** | Not fully parsed (constraints, relationships) | Extract separately with DBC tools |
-| **PRG source files** | Not copied to `.vfp-ai/source/` cache | Copy manually or enhance sync |
 
 ### For a complete application rewrite, you need:
 
-1. **This toolchain's output** (`vfp_sync`) → provides all class/method/property code ✅
-2. **This toolchain's DBF export** (`vfp_export_table`) → table schemas + data ✅ (no longer needs external tools)
-3. **DBC schema export** → table relationships and constraints
-4. **PRG file analysis** → copy PRG files to cache or search source project
+1. **This toolchain's output** (`vfp_sync` / `--include-forms`) → all class/method/property code + form source ✅
+2. **This toolchain's DBF export** (`vfp_export_table` / `--include-data`) → table schemas + data ✅ (no external tools)
+3. **DBC schema export** → table relationships and constraints (optional)
 
 ### One-Command Audit
 
-Use `vfp_audit` to generate a complete project audit in any target directory:
+Use `vfp_audit` to generate a complete, self-contained project audit in any target directory:
 
 ```bash
-opencode vfp_audit --source "/path/to/vfp/project" --out "/path/to/audit/output"
+# Self-contained: data + form code (the two heavy options below are optional)
+opencode vfp_audit --source <project> --out <audit_output>
+
+# Fully reconstructable: add full DBF data (slow) — form code is included by default
+opencode vfp_audit --source <project> --out <audit_output> --include-data
 ```
 
 This generates:
@@ -547,6 +601,8 @@ This generates:
 - **`database_schema.json`** — all DBF table schemas with encodings
 - **`table_relationships.json`** — table usage patterns, inferred SQL joins
 - **`class_analysis.json`** — class hierarchy, inheritance depth, complexity ranking
+- **`forms/`** — full source of every form/class/method + PRG scripts (default on; disable with `--no-include-forms`)
+- **`dbf/`** — per-table schema JSON (+ with `--include-data`, full record JSONL incl. memo/FPT), mirroring the project tree
 
 The `@vfp-analyst` agent can then read these files and answer questions like:
 - "Which tables have the most records?"
@@ -562,7 +618,7 @@ Use this toolchain to reverse-engineer the **application logic** (forms, classes
 
 ## Tested
 
-Verified on `D:\Logis_projekt\logis_bok_4` (1,218 binary files):
+Verified on a real VFP project (`<project>`, ~1,218 binary files):
 - 631/633 files converted successfully (2 failures: missing .CDX files)
 - 946 text files generated in `.vfp-ai/source/` (840 SC2, 65 FR2, 41 VC2, 8 PJ2)
 - 0 source files modified (SHA256/size/mtime verified unchanged)
@@ -581,7 +637,7 @@ Note: DBF→DB2 conversion via FoxBin2Prg returns `RC=0` but does NOT create `.d
 4. **Large projects**: Full sync of 600+ files takes ~5 minutes (VFP9 COM startup per file). DBF export is fast (no COM overhead).
 5. **DB2 cache issue**: DBF→DB2 conversion via FoxBin2Prg returns `RC=0` but does not create `.db2` in cache (`cOutputFolder` does not redirect DBF output). Use `vfp_export_table` instead for DBF schema — it exports directly to `.vfp-ai/dbf/` cache.
 6. **PRG files**: Not automatically copied to `.vfp-ai/source/`. Only referenced in PJ2 project files. To search PRG code, either copy them to the cache or use `vfp_find_references` on the source project directory directly.
-7. **DBF memo content**: Fallback reader (without `dbfread`/`FoxBin2Prg`) can detect memo fields but cannot read FPT content. Install `dbfread` for full memo support: `pip install dbfread`.
+7. **DBF memo content**: `dbfbridge` (preferred) reads FPT memo fields inline. `dbfread` (fallback) and the built-in reader detect memo fields but the built-in reader cannot read FPT content. Install `dbfbridge` for full memo support.
 
 ## Credits
 

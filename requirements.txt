@@ -1,3 +1,20 @@
-# Optional dependency for DBF schema/data export.
-# If not installed, a built-in minimal DBF reader is used as fallback.
-dbfread>=2.0.7
+# DBF support
+#
+# The dbfbridge package (preferred DBF backend: memo/FPT, batch export,
+# validation, Polish cp1250/cp852/Mazovia encoding fallback) is VENDORED in
+# this repo under tools/dbfbridge/ — it is loaded from the repo and does NOT
+# need to be pip-installed. See tools/dbfbridge/VERSION.txt for the pinned
+# upstream commit and source hashes.
+#
+# dbfbridge's own runtime dependencies still need to be installed:
+dbfread>=2.0.7        # streaming DBF/FPT reading (used by dbfbridge and the fallback)
+orjson>=3.10          # fast JSONL parsing (dbfbridge)
+xlsxwriter>=3.2       # XLSX export (dbfbridge)
+openpyxl>=3.1.5       # XLSX read/reconstruction (dbfbridge)
+dbf>=0.99.11          # DBF writing (dbfbridge reconstruction)
+# NOTE: `polars` is NOT required. It is only an optional fast path for CSV
+# output; dbfbridge transparently falls back to a pure-Python CSV writer when
+# polars is absent. JSONL export (the primary format) never uses polars.
+
+# If none of the above are installed, vfp_dbf_export.py falls back to a built-in
+# minimal DBF reader (schema + non-memo data, no FPT).

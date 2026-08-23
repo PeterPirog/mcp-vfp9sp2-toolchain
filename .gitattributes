@@ -1,0 +1,12 @@
+# Line-ending normalization.
+# Store/commit as LF everywhere; checkout per-file per its attribute.
+* text=auto
+
+# Windows batch / VBS / PowerShell: must stay CRLF
+*.vbs   text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Vendored snapshot: byte-exact (pinned by tools/dbfbridge/VERSION.txt hashes)
+tools/dbfbridge/* -text

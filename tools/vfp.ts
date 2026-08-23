@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin"
-import { readFileSync, existsSync } from "fs"
+import { readFileSync, existsSync, readdirSync, statSync } from "fs"
 import { join } from "path"
 
 const py = process.platform === "win32" ? "py" : "python3"
@@ -22,6 +22,18 @@ function loadConfig(): Record<string, any> | null {
   }
 }
 
+// Canonical exclusion list, kept in sync with config.json -> defaultExcludes
+// and vfp_common.default_excludes() (Python). Fallback if config is unreadable.
+function excludeDirs(cfg: Record<string, any> | null): string[] {
+  const raw = (cfg?.defaultExcludes || ["backup", "backups", "archive"]).map((s: string) => String(s).toLowerCase())
+  return raw
+}
+
+function isExcludedDir(item: string, cfg: Record<string, any> | null): boolean {
+  if (item.startsWith(".")) return true
+  return excludeDirs(cfg).includes(item.toLowerCase())
+}
+
 function foxbin2prgDir(cfg: Record<string, any> | null): string {
   const fb = cfg?.foxbin2prg || {}
   return process.env.VFP_FOXBIN2PRG_DIR ||
@@ -32,7 +44,10 @@ function foxbin2prgDir(cfg: Record<string, any> | null): string {
 
 function resolveDriver(cfg: Record<string, any> | null): string {
   const idx = cfg?.indexer || {}
-  return idx.script ? join(TOOLCHAIN_HOME, idx.script) : DRIVER
+  // Coherent with config.json: honour an explicit script path, then a python
+  // interpreter override, else the default vfp_driver.py in the toolchain.
+  const script = idx.script || idx.python
+  return script ? join(TOOLCHAIN_HOME, String(script)) : DRIVER
 }
 
 function vfp9Exe(cfg: Record<string, any> | null): string | null {
@@ -47,6 +62,7 @@ export const vfp_detect = tool({
     directory: tool.schema.string().describe("Project directory to scan. Defaults to current worktree."),
   },
   async execute(args, context) {
+    const cfg = loadConfig()
     const dir = args.directory || context.worktree || process.cwd()
     const exts = [".scx", ".vcx", ".frx", ".mnx", ".lbx", ".pjx", ".dbc", ".dbf", ".prg", ".h", ".sct", ".vct"]
     const counts: Record<string, number> = {}
@@ -55,18 +71,17 @@ export const vfp_detect = tool({
 
     async function walk(d: string) {
       try {
-        const { readdirSync } = await import("fs")
         const items = readdirSync(d)
         for (const item of items) {
           const full = join(d, item)
-          const stat = require("fs").statSync(full)
+          const stat = statSync(full)
           if (stat.isDirectory()) {
             if (item === ".vfp-ai" && !cacheExists) cacheExists = true
-            if (!item.startsWith(".") && !["backup", "backups", "archive"].includes(item.toLowerCase())) {
+            if (!isExcludedDir(item, cfg)) {
               await walk(full)
             }
           } else {
-            if (item.startsWith(".") || ["backup", "backups", "archive"].includes(item.toLowerCase())) continue
+            if (isExcludedDir(item, cfg)) continue
             const ext = (item.slice(-4).toLowerCase())
             const ext3 = (item.slice(-3).toLowerCase())
             const e = ext.startsWith(".") ? ext : "." + ext3
@@ -167,7 +182,6 @@ export const vfp_export_project = tool({
     const results: Array<Record<string, any>> = []
 
     async function walk(d: string) {
-      const { readdirSync, statSync } = await import("fs")
       const items = readdirSync(d)
       for (const item of items) {
         if (item.startsWith(".") || cfg.defaultExcludes?.includes(item)) continue
@@ -371,7 +385,6 @@ export const vfp_find_references = tool({
     const results: Array<Record<string, any>> = []
 
     async function walk(d: string) {
-      const { readdirSync, statSync } = await import("fs")
       try {
         const items = readdirSync(d)
         for (const item of items) {
@@ -419,7 +432,6 @@ export const vfp_find_table_usage = tool({
 
     const results: Array<Record<string, any>> = []
     async function walk(d: string) {
-      const { readdirSync, statSync } = await import("fs")
       try {
         const items = readdirSync(d)
         for (const item of items) {
@@ -551,15 +563,53 @@ export const vfp_list_tables = tool({
   },
 })
 
+export const vfp_export_dir = tool({
+  description:
+    "Batch-export a WHOLE directory tree of DBF tables (schema + data) in one go using the vendored dbfbridge — NO VFP9 required. Output mirrors the source folder structure. Use this to export many tables without running a full audit.",
+  args: {
+    source: tool.schema.string().describe("Directory containing the .dbf files (project root or a subfolder)."),
+    out: tool.schema.string().optional().describe("Output directory. Defaults to <project>/.vfp-ai/dbf."),
+    formats: tool.schema.string().optional().describe("Comma-separated formats: 'jsonl', 'csv', 'json', 'xlsx'. Default: 'jsonl'."),
+    deleted: tool.schema.string().optional().describe("Deleted record handling: 'skip', 'separate', or 'include'. Default: 'include'."),
+  },
+  async execute(args, context) {
+    const cfg = loadConfig()
+    if (!cfg) throw new Error("Cannot read config.json at " + CONFIG)
+    const dir = args.source || context.worktree || process.cwd()
+    const outDir = args.out || join(context.worktree || process.cwd(), cfg.cacheDirectory || ".vfp-ai", "dbf")
+
+    const cmd = [py, DRIVER, "dbf_dir", "--source", dir, "--out", outDir]
+    if (args.formats) cmd.push("--formats", args.formats)
+    if (args.deleted) cmd.push("--deleted", args.deleted)
+
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `dbf_dir exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
 export const vfp_audit = tool({
   description:
-    "Run a comprehensive audit of a VFP project: BIN2PRG sync (if VFP9 available) + DBF schema export + table relationship analysis + class hierarchy analysis. Outputs a consolidated audit report to a target directory. DBF schema analysis works WITHOUT VFP9.",
+    "Run a comprehensive audit of a VFP project: BIN2PRG sync (if VFP9 available) + DBF schema export + table relationship analysis + class hierarchy analysis. Outputs a consolidated audit report to a target directory. DBF schema analysis works WITHOUT VFP9. " +
+    "includeForms (default true): export the FULL source of every form/class/method (button Click handlers, PROCEDURE/Function bodies) + PRG scripts to <out>/forms — makes the audit self-contained for form reconstruction without FoxPro. " +
+    "OPTIONAL includeData: reads the FULL contents of every table (incl. memo/FPT) and writes it to <out>/dbf mirroring the project folder structure — this is slow and disk-heavy, use only when the data itself is needed.",
   args: {
     source: tool.schema.string().describe("Source directory of the VFP project to audit."),
-    out: tool.schema.string().describe("Target directory where audit output will be written (schema JSON, data, relationships, Markdown report)."),
-    skipSync: tool.schema.boolean().optional().describe("Skip BIN2PRG conversion — use existing .vfp-ai cache if available."),
-    includeData: tool.schema.boolean().optional().describe("Also export DBF record data (in addition to schema)."),
-    dataFormats: tool.schema.string().optional().describe("Comma-separated data export formats when includeData=true: 'jsonl', 'csv'. Default: 'jsonl'."),
+    out: tool.schema.string().describe("Target directory where audit output will be written (schema JSON, forms, data, relationships, Markdown report)."),
+    skipSync: tool.schema.boolean().optional().describe("Skip the automatic BIN2PRG sync. By default the audit runs a sync first if the .vfp-ai cache is missing (class/form analysis needs it)."),
+    includeForms: tool.schema.boolean().optional().describe(
+      "Export the FULL source of every form/class/method (button Click handlers, PROCEDURE/Function bodies) + PRG scripts to <out>/forms. " +
+      "ON BY DEFAULT. Set false to skip (faster, smaller audit)."),
+    includeData: tool.schema.boolean().optional().describe(
+      "OPTIONAL / SLOW: also export the FULL contents of every DBF table (incl. memo/FPT) to <out>/dbf, mirroring the project folder structure. " +
+      "Reads every table and can take a long time and use a lot of disk. Default false (schema only)."),
+    dataFormats: tool.schema.string().optional().describe("When includeData=true, comma-separated data formats: 'jsonl', 'csv', 'json', 'xlsx'. Default: 'jsonl'."),
+    maxTables: tool.schema.number().optional().describe("With includeData=true, limit export to N largest tables (0 = all). Default 0."),
+    dbfExclude: tool.schema.string().optional().describe("Comma-separated uppercase substrings to exclude from the DBF scan (e.g. 'ARCH,TMP'). Default empty."),
+    noCacheScan: tool.schema.boolean().optional().describe("Do not scan .vfp-ai/source for table usage."),
   },
   async execute(args, context) {
     const cfg = loadConfig()
@@ -567,8 +617,12 @@ export const vfp_audit = tool({
 
     const cmd = [py, DRIVER, "audit", "--source", args.source, "--out", args.out]
     if (args.skipSync) cmd.push("--skip-sync")
+    if (args.includeForms === false) cmd.push("--no-include-forms")
     if (args.includeData) cmd.push("--include-data")
     if (args.dataFormats) cmd.push("--data-formats", args.dataFormats)
+    if (args.maxTables !== undefined && args.maxTables !== null) cmd.push("--max-tables", String(args.maxTables))
+    if (args.dbfExclude) cmd.push("--dbf-exclude", args.dbfExclude)
+    if (args.noCacheScan) cmd.push("--no-cache-scan")
 
     const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
     const out = await new Response(p.stdout).text()

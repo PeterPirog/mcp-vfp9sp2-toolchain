@@ -1,0 +1,46 @@
+# dbfbridge vendored source — provenance
+#
+# Package : dbfbridge 0.1.0
+# Upstream: https://github.com/PeterPirog/dbfbridge
+# Commit  : addbadb
+# Vendored: 2026-08-22
+# License : MIT (see LICENSE in this directory)
+#
+# This is a frozen copy of the dbfbridge Python package (src/dbf_bridge and
+# src/dbfbridge) vendored into the VFP toolchain so the tool does not depend
+# on an installed / externally-evolving dbfbridge distribution.
+#
+# To update: re-copy from a fresh clone of the upstream repo at the desired
+# commit, then update the hash manifest below and the version here.
+#
+# sha256 manifest (relative to the dbfbridge repo root):
+
+e218831a00624c6ab6d2f673573d96f2c6d375cece9ba8b377bb447bdc45213b  src/dbf_bridge/__init__.py
+96ac1590da626feff51476f6e86b8d745c1c05ce636d75e4af8b96769a9da901  src/dbf_bridge/api.py
+36c2ebc175d1e3afdd2bcb1558f8056520885ecdb453664ad6c72dedafcc3db4  src/dbf_bridge/api_models.py
+b815ebe411e4a67d0ddefb21d52c8918c5ef616c7ad0713cf5427ee0b4c29a12  src/dbf_bridge/cli.py
+7926a3bac81848345f5a69113e46435397c532882124ee78a1b961f855979ec2  src/dbf_bridge/converters.py
+ec32ab3ee2a5fa90cad799cfcd3d22330b59d752e312c13c3b68c3c3633e52cc  src/dbf_bridge/import_cli.py
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  src/dbf_bridge/py.typed
+3a0f23cd50a72efe3b76367b34faf824aebb301afbd66e1cb32ae7975c9b2ae1  src/dbf_bridge/quality.py
+127a366da7065ac9e31ea5dc3849c819e7191a0d936185500e024c8a4fe4e9c0  src/dbf_bridge/verifier.py
+9a55f60731f35def8f50e404bc73295f17405d795e2138496fcaa6c5eedbe50e  src/dbf_bridge/exporter/__init__.py
+ece2fe31fc1dc34ff52e637e75ce588b028fbdd4bed9b1eb05f23d62d4668d83  src/dbf_bridge/exporter/config.py
+dfbaedc15e89830e34bd54bec0803f93d0bd68d25baffd4134cb2fab0af399b1  src/dbf_bridge/exporter/discovery.py
+87b1ea005ce19a2d9a441ae06cdf28550aa5341f7d9a4508bc2e23f5e86fb290  src/dbf_bridge/exporter/incremental.py
+1dcd1d44ea11328fce1c5caae58f8667468795d4a88991395b8135e8eecc21ff  src/dbf_bridge/exporter/models.py
+4fe67aaaa86c5b227286fcc213734c439e187e1545e58f516973a6dac3789b0b  src/dbf_bridge/exporter/polish_codecs.py
+97b3512a399d6c892d7e55f329cd1cbc2ea3050e873905f63fdb83ff4f5be16f  src/dbf_bridge/exporter/reader.py
+771673112b943875bf66ef18417a2ee7dcd34dfd8e30d79c62d043f0bde9ec81  src/dbf_bridge/exporter/reporting.py
+1975fec612833026ef407d48b336a71617b383d49c335815563183e0eb32a9ce  src/dbf_bridge/exporter/serialization.py
+bb4b74f7b1bb292b59f3b6be639bc287c87e70ff45c6113df518018050f61d0d  src/dbf_bridge/exporter/validation.py
+1089897e4a48b54a7febd78ee0e7ef589a67a34b58343936e0aa8c9f8e882a02  src/dbf_bridge/exporter/writer.py
+0d0c12f9b5b4fa4323181b9065473902039fafda17fe40468a4f651f837fc6a5  src/dbf_bridge/importer/__init__.py
+f104437fbe687bf10057fead71d560e405cf3b2644b3d933859db8f3e3e5a2a2  src/dbf_bridge/importer/checksum.py
+8c9191b78d392a1c4c412aaf7d913c154981111232b483203a6cf7565ffffdbd  src/dbf_bridge/importer/models.py
+87c1fcb090a660556e0934ed2719054d1912a7beea8744863b206a678a537574  src/dbf_bridge/importer/readers.py
+9f4683154e625cbdb0efa5aeb3d38c3dc968c546517f3493a3f76a0a30a77a53  src/dbf_bridge/importer/reconstruct.py
+1cd796a8e7d5580ceef898e9abc4a224206d42ffee6a303e01f07da65818b7c8  src/dbf_bridge/importer/reporting.py
+9eb54170f1d77e6e3dc07b12c4d3f06d79377f25b14586bde6eea420c68bf83e  src/dbf_bridge/importer/writer.py
+457e55a8ecff21620bbe7358f2d12bb7af95382910bf5898590db50b2f88a6bf  src/dbfbridge/__init__.py
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  src/dbfbridge/py.typed

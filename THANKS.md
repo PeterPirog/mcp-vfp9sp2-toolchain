@@ -1,5 +1,17 @@
 # Credits & Attributions
 
+## Licensing
+
+This project (the toolchain wrapper: `vfp_driver.py`, `vfp_audit.py`,
+`vfp_dbf_export.py`, `vfp_indexer.py`, `vfp_convert.vbs`, `vfp_verno.vbs`,
+`tools/vfp.ts`, `agents/vfp-analyst.md`, `install.py`) is released under the
+**MIT License** — see [LICENSE](LICENSE).
+
+Third-party components retain their own licenses:
+- **FoxBin2Prg** (runtime, not vendored) — see below.
+- **dbfbridge** (vendored under `tools/dbfbridge/`) — MIT, see `tools/dbfbridge/LICENSE`.
+- **dbfread** (pip dependency) — see below.
+
 ## FoxBin2Prg — Fabio Zadro (fdbozzo)
 
 **Repository**: https://github.com/fdbozzo/foxbin2prg  
@@ -54,17 +66,24 @@ Thank you, Fabio — for creating and maintaining FoxBin2Prg, without which this
 
 ---
 
-## DBF support: dbfread (khicaey/ExcelPython) and dbfbridge
+## DBF support
 
-**dbfread**: https://github.com/elixir-dbf/dbfread  
-**dbfbridge**: https://github.com/PeterPirog/dbfbridge  
+This repo ships its own DBF backend and relies on one third-party library:
 
-The DBF schema and data export tooling (`vfp_dbf_export.py`, `vfp_export_table`, `vfp_list_tables`) is inspired by the `dbfbridge` project by Peter Pirog. This toolchain does **NOT** depend on the `dbfbridge` package as an external dependency — instead, it uses the same underlying `dbfread` library directly, with a built-in minimal DBF reader as a fallback when `dbfread` is not installed.
+- **`dbfbridge`** — the DBF export/import engine, **bundled** in this repo under
+  `tools/dbfbridge/` (MIT, frozen snapshot — see `tools/dbfbridge/VERSION.txt`).
+  Provides memo/FPT-aware export, batch export, JSONL/CSV/XLSX, and
+  reconstruction/round-trip validation. Loaded from the repo, so it does **not**
+  need to be pip-installed.
+- **`dbfread`** — https://github.com/elixir-dbf/dbfread — streaming DBF/FPT reader
+  (field descriptors, records, memo data). This is the only runtime pip dependency.
 
-- `dbfread` provides streaming DBF/FPT reading (field descriptors, records, memo data)
-- `dbfbridge` provides the architectural pattern (schema JSON + data JSONL export)
-- This repo re-implements the pattern independently — no `dbfbridge` import required
+When neither is available, `vfp_dbf_export.py` falls back to a built-in minimal DBF
+reader (schema + non-memo data, no FPT).
 
-**Install**: `pip install dbfread` (optional — built-in reader used as fallback)
+**Install**: `pip install dbfread` (the only runtime dependency).
 
-Thank you to both projects for their excellent work on VFP DBF handling.
+### Thank you
+
+Thank you to the **dbfread** project (elixir-dbf) for the streaming DBF/FPT reader that
+underpins the data export.
