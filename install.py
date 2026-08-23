@@ -29,10 +29,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def is_windows():
+    """True when running on Windows."""
     return os.name == "nt"
 
 
 def get_default_opencode_config():
+    """Return the OpenCode config directory for this OS."""
     home = os.environ.get("USERPROFILE") or os.environ.get("HOME") or ""
     if is_windows():
         return os.path.join(home, ".config", "opencode")
@@ -52,6 +54,7 @@ def symlink_or_copy(src, dst):
 
 
 def find_foxbin2prg(explicit_dir):
+    """Locate foxbin2prg.prg (explicit dir, env var, or default)."""
     candidates = []
     if explicit_dir:
         candidates.append(explicit_dir)
@@ -122,6 +125,7 @@ def check_vfp9_com():
 
 
 def main():
+    """Installer entrypoint: symlink tools, verify environment."""
     ap = argparse.ArgumentParser(prog="install")
     ap.add_argument("--toolchain-dir", default=HERE,
                     help="Root directory of the VFP toolchain (default: this script's dir)")
@@ -131,6 +135,8 @@ def main():
                     help="Directory containing foxbin2prg.prg")
     ap.add_argument("--no-symlink", action="store_true",
                     help="Copy files instead of symlinking (useful on Windows without admin)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Show what would be done without making any changes (no symlinks, no verify)")
     ap.add_argument("--no-verify", dest="verify", action="store_false",
                     help="Skip post-install verification")
     ap.add_argument("--verify", dest="verify", action="store_true",
@@ -140,6 +146,10 @@ def main():
 
     toolchain = os.path.abspath(a.toolchain_dir)
     opencod = os.path.abspath(a.opencode_config or get_default_opencode_config())
+
+    if a.dry_run:
+        print()
+        print("[DRY-RUN] No changes will be made (no symlinks, no verify).")
 
     print("=" * 60)
     print("VFP Integration Toolchain Installer")
@@ -188,18 +198,50 @@ def main():
         print("       DBF export tools (vfp_export_table, vfp_list_tables) also work without VFP9.")
     print()
 
-    # 2b. dbfread (optional Python dependency for DBF export)
-    dbfread_ok = False
+    # 2b. DBF backend (dbfbridge is VENDORED in tools/dbfbridge; fallback: dbfread)
+    vendored_dbf = os.path.join(toolchain, "tools", "dbfbridge", "dbf_bridge")
+    vendored_ok = os.path.isdir(vendored_dbf)
+    print()
+    if vendored_ok:
+        print("[OK] Vendored dbfbridge present (tools/dbfbridge) — memo/FPT, batch export, validation.")
+    else:
+        print("[WARN] Vendored dbfbridge missing at tools/dbfbridge — DBF export will fall back to dbfread/built-in reader.")
     try:
         import dbfread
         dbfread_ok = True
-        print("[OK] dbfread %s found — best DBF field type parsing" % dbfread.__version__)
+        print("[OK] dbfread %s installed — dbfbridge runtime dependency + fallback reader (no memo/FPT)" % dbfread.__version__)
     except ImportError:
-        print("[INFO] dbfread not installed — a built-in minimal DBF reader will be used as fallback.")
-        print("       Install for better results:  py -m pip install dbfread")
+        if vendored_ok:
+            print("[WARN] dbfread not installed — the vendored dbfbridge needs dbfread/orjson/xlsxwriter/openpyxl.")
+            print("       Install runtime deps:  py -m pip install dbfread orjson xlsxwriter openpyxl dbf")
+        else:
+            print("[INFO] No DBF backend available — a built-in minimal DBF reader will be used (no memo/FPT).")
+            print("       Install for better results:  py -m pip install dbfread orjson xlsxwriter openpyxl")
+    try:
+        for dep in ("orjson", "xlsxwriter", "openpyxl", "dbf"):
+            __import__(dep)
+    except ImportError as e:
+        if vendored_ok:
+            print("[WARN] Missing dbfbridge runtime dependency: %s — XLSX/batch features may be limited." % e.name)
+    # polars is OPTIONAL (only a CSV fast path; pure-Python fallback is used without it).
+    try:
+        __import__("polars")
+        print("[OK] polars installed (optional fast CSV export path)")
+    except ImportError:
+        print("[OK] polars not installed — CSV export will use the pure-Python fallback (fine)")
     print()
 
     # 3. Symlink tools
+    if a.dry_run:
+        print()
+        print("[DRY-RUN] Would link/copy:")
+        print("  tools/vfp.ts       -> %s" % os.path.join(opencod, "tools", "vfp.ts"))
+        print("  agents/vfp-analyst.md -> %s" % os.path.join(opencod, "agents", "vfp-analyst.md"))
+        print("[DRY-RUN] Would verify with: vfp_driver.py verno / dbf_list")
+        print()
+        print("Done (dry-run). No changes were made.")
+        return
+
     tools_dst = os.path.join(opencod, "tools")
     os.makedirs(tools_dst, exist_ok=True)
     ts_src = os.path.join(toolchain, "tools", "vfp.ts")

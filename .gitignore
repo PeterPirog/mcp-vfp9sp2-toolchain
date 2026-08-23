@@ -5,6 +5,9 @@
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
+.coverage
+htmlcov/
 
 # OpenCode cache
 .vfp-ai/
@@ -22,6 +25,11 @@ Thumbs.db
 
 # Internal RAG (operational state, not for distribution)
 INTERNAL_RAG/
+AGENTS.md
+
+# Agent / OpenCode local config (never for distribution)
+.agents/
+.opencode/
 
 # Pre-existing tool junk (not part of toolchain)
 *.db2
@@ -29,3 +37,6 @@ INTERNAL_RAG/
 
 # Test artifacts
 *.fxp
+
+# Working scratch / local-only notes (not for distribution)
+Prompt build VFP 9.0  Translator.txt

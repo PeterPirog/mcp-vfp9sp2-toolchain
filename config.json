@@ -1,5 +1,6 @@
 {
   "schemaVersion": 2,
+  "version": "0.2.0",
   "readOnly": true,
   "vfp": {
     "exeEnvironmentVariable": "VFP9_EXE",
@@ -19,26 +20,21 @@
     "inhibitInheritance": 3
   },
   "cacheDirectory": ".vfp-ai",
-  "classPerFile": 2,
   "indexer": {
-    "python": "py",
     "timeoutMs": 300000
   },
   "dbfExport": {
-    "python": "py",
-    "optionalDependency": "dbfread",
-    "cacheSubdir": "dbf",
-    "formats": ["jsonl", "csv"],
-    "deletedOptions": ["skip", "separate", "include"],
-    "defaultDeleted": "skip",
-    "defaultFormat": "jsonl"
+    "formats": ["jsonl", "csv", "json", "xlsx"]
   },
   "defaultExcludes": [
     ".git",
     ".vfp-ai",
     "backup",
     "backups",
-    "archive"
+    "archive",
+    "tmp",
+    "node_modules",
+    "__pycache__"
   ],
   "artifacts": {
     "bin2prg": ["pjx", "scx", "vcx", "frx", "lbx", "mnx", "dbc", "dbf"],

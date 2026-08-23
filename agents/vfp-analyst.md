@@ -27,7 +27,8 @@ You have access to the following custom tools (provided by `~/.config/opencode/t
 | `vfp_trace` | Trace class inheritance chain across libraries | ❌ No |
 | `vfp_export_table` | Export DBF schema + optional data to JSONL/CSV | ❌ No |
 | `vfp_list_tables` | List all DBF tables with field/record counts | ❌ No |
-| `vfp_audit` | Comprehensive one-command audit to a target directory | ⚠️ Partial |
+| `vfp_export_dir` | Batch-export a whole DBF tree (schema + data, memo/FPT) | ❌ No |
+| `vfp_audit` | Comprehensive one-command audit to a target directory. Exports full form/class/method source (`forms/`, ON by default; `--no-include-forms` to skip) and, with `--include-data`, full table data (`dbf/`) | ⚠️ Partial |
 
 You can also use standard file tools (`read`, `grep`, `glob`) directly on the `.sc2`/`.vc2`/`.prg` files in the project or the `.vfp-ai` cache directory.
 
@@ -38,7 +39,13 @@ To generate a full project audit in a target directory, ask the user for the out
 ```
 vfp_audit --source <project_dir> --out <target_dir>
 ```
-This produces: `audit_report.md`, `project_summary.json`, `database_schema.json`, `table_relationships.json`, `class_analysis.json`, plus individual `<table>_schema.json` files.
+By default the audit **syncs first** (BIN2PRG → `.vfp-ai` cache) if that cache is missing, so class/form analysis works out of the box. Pass `skipSync: true` to use an existing cache only.
+
+This produces: `audit_report.md`, `project_summary.json`, `database_schema.json`, `table_relationships.json`, `class_analysis.json`, `duplicate_tables.json`, plus individual `<table>_schema.json` files.
+
+By default it also writes **`forms/`** — the full source of every form/class/method (button `Click` handlers, `PROCEDURE`/`Function` bodies) and PRG scripts. Read files in `<target_dir>/forms/` to reconstruct or explain form behaviour without FoxPro. Disable with `--no-include-forms`.
+
+Add `--include-data` to also dump full table contents (incl. memo/FPT) to `<target_dir>/dbf/` (slow / disk-heavy).
 
 ### Detailed Investigation
 1. **Detect** — Run `vfp_detect` to confirm VFP artifacts exist in the project.

@@ -15,7 +15,6 @@ import hashlib
 import json
 import os
 import re
-import sys
 import time
 
 
@@ -167,6 +166,7 @@ def parse_sc2(filepath):
 
 
 def sha256_file(path):
+    """Return the SHA-256 hex digest of a file."""
     h = hashlib.sha256()
     try:
         with open(path, "rb") as f:
@@ -243,12 +243,15 @@ def scan_project(project, cache_dir, full=False):
                             "baseClass": cls["baseClass"],
                             "file": rel,
                         })
-                    for meth in parsed["methods"]:
-                        index["methods"].append({
-                            "name": meth["name"],
-                            "class": "",
-                            "file": rel,
-                        })
+                        # Attribute each method to its owning class (previously
+                        # lost: methods were appended with class="" which made
+                        # per-class complexity/analysis impossible).
+                        for meth in cls.get("methods", []):
+                            index["methods"].append({
+                                "name": meth["name"],
+                                "class": cls["name"],
+                                "file": rel,
+                            })
 
             index["files"][rel] = entry
 
@@ -284,6 +287,7 @@ def run(project, cache, full=False):
 
 
 def main():
+    """argparse entrypoint for the indexer CLI."""
     ap = argparse.ArgumentParser(prog="vfp_indexer")
     ap.add_argument("--project", required=True)
     ap.add_argument("--cache", required=True)
