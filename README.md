@@ -8,6 +8,42 @@ Strict read-only integration between [OpenCode](https://opencode.ai) AI agents a
 
 > **Credits**: This toolchain depends on [FoxBin2Prg](https://github.com/fdbozzo/foxbin2prg) by Fabio Zadro ([fdbozzo](https://github.com/fdbozzo)). FoxBin2Prg is a free, open-source utility that converts between VFP binary files (.scx/.vcx/.frx/etc.) and text. This toolchain wraps it in a strict read-only shell. See [THANKS.md](THANKS.md) for details.
 
+## Zero-Setup: One Prompt for Warp / OpenCode
+
+Nothing installed yet? Paste **this single prompt** into [Warp](https://warp.dev) or an OpenCode session (Ctrl+L / new chat) and the AI will download, install and run everything on its own — no manual setup:
+
+```
+Set up the VFP Integration Toolchain from scratch, then run a full audit of a Visual FoxPro project.
+
+PROJECT_DIR:      C:\path\to\my\foxpro\project
+AUDIT_DIR:        C:\path\to\where\you\want\the\audit\output
+FOXBIN2PRG_DIR:   C:\path\to\foxbin2prg     (only if foxbin2prg.prg is not in a default location)
+
+Do the following IN ORDER, stopping and reporting on any failure:
+1. Download the toolchain:
+   git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
+   cd vfp-integration-toolchain
+2. Install Python dependencies:
+   py -m pip install dbfread orjson xlsxwriter openpyxl dbf
+3. Install the toolchain into OpenCode (symlinks tools + agent, then verifies):
+   py install.py --foxbin2prg-dir "<FOXBIN2PRG_DIR>"
+   (if VFP9 is not installed yet, note that BIN2PRG sync will fail — DBF
+    schema/data export still works; ask me whether to continue)
+4. Verify: run vfp_status (or `py vfp_driver.py verno --prg <FOXBIN2PRG_DIR>\foxbin2prg.prg`)
+5. Detect VFP artifacts in the project:
+   vfp_detect --directory <PROJECT_DIR>
+6. Full audit with ALL project files + ALL table data:
+   vfp_audit --source <PROJECT_DIR> --out <AUDIT_DIR> --include-data
+7. When done, report: table count, form count, data export size, warnings,
+   and the 5 largest tables by record count. List the top files in <AUDIT_DIR>.
+```
+
+Requirements for the AI session: internet access (for `git clone` / `pip`),
+Windows with Python 3 (`py`), and VFP9 installed **only** for the BIN2PRG
+part — DBF schema and data export work without it. After step 6,
+`<AUDIT_DIR>` is self-contained: database + every form can be rebuilt
+without FoxPro and without the original binaries.
+
 ## Quick Start
 
 ```bash
@@ -401,6 +437,9 @@ opencode vfp_audit --source <project> --out <audit_output> --include-data --data
 
 # Limit the data export to the N largest tables (0 = all)
 opencode vfp_audit --source <project> --out <audit_output> --include-data --max-tables 20
+
+# Only audit tables matching specific name substrings (uppercase)
+opencode vfp_audit --source <project> --out <audit_output> --include-data --only-tables ARCH,TMP
 
 # Full audit including form/class code (DEFAULT ON, no extra flag needed;
 # use --no-include-forms to skip)

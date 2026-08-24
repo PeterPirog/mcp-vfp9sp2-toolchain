@@ -79,7 +79,9 @@ py vfp_driver.py audit     --source <project> --out <audit_output> [--include-da
 | `--include-data` | off | Export full DBF record data (slow, disk-heavy) to `<out>/dbf` |
 | `--data-formats` | `jsonl` | `jsonl,csv,json,xlsx` (with `--include-data`) |
 | `--max-tables` | `0` | Limit `--include-data` to the N largest tables |
+| `--only-tables` | `""` | Only process tables whose path contains one of these uppercase substrings (e.g. `ARCH,TMP`) |
 | `--dbf-exclude` | `""` | Uppercase substrings to skip (e.g. `ARCH,TMP`) |
+| `--no-validate` | off | Export data with `validate=False` (if `validate=True` fails; the tool already auto-retries without validation) |
 | `--no-include-forms` | off | Skip the `forms/` export (on by default) |
 | `--no-cache-scan` | off | Do not scan `.vfp-ai/source` for table usage |
 
