@@ -62,7 +62,7 @@ class VFPProjectAuditor:
     def __init__(self, source_dir, out_dir, skip_sync=False,
                  include_data=False, data_formats=("jsonl",),
                  max_tables=0, dbf_exclude=(), scan_cache=True,
-                 include_forms=True):
+                 include_forms=True, no_validate=False, only_tables=()):
         self.source = os.path.abspath(source_dir)
         self.out = os.path.abspath(out_dir)
         self.skip_sync = skip_sync
@@ -70,6 +70,8 @@ class VFPProjectAuditor:
         self.data_formats = data_formats
         self.max_tables = max_tables  # 0 = all tables
         self.dbf_exclude = [p.strip().upper() for p in dbf_exclude if p.strip()]
+        self.no_validate = no_validate  # export with validate=False (dbfbridge)
+        self.only_tables = [p.strip().upper() for p in only_tables if p.strip()]
         self.scan_cache = scan_cache
         self.include_forms = include_forms
         self.cache_dir = os.path.join(self.source, ".vfp-ai")
@@ -114,6 +116,9 @@ class VFPProjectAuditor:
                     rel = os.path.relpath(fp, self.source).upper()
                     if any(pat in rel for pat in self.dbf_exclude):
                         continue
+                    if self.only_tables:
+                        if not any(t in rel for t in self.only_tables):
+                            continue
                     files.append(fp)
         return files
 
@@ -156,6 +161,30 @@ class VFPProjectAuditor:
                 "(set VFP_FOXBIN2PRG_DIR). Class/form analysis will be incomplete." % prg)
             return
 
+        # Report missing companion files up front (real-run report #1/#6:
+        # FoxBin2Prg fails with rc=41 + empty stderr when a companion such as
+        # .sct/.fpt/.pjt is absent — previously indistinguishable from a
+        # missing VFP9 install).
+        missing_by_file = {}
+        for root, dirs, files_ in os.walk(self.source):
+            dirs[:] = [d for d in dirs if not d.startswith(".")
+                       and d.lower() not in self.EXCLUDE_DIRS]
+            for fn in files_:
+                ext = os.path.splitext(fn)[1].lower()
+                if ext not in vfp_common.COMPANIONS:
+                    continue
+                fp = os.path.join(root, fn)
+                miss = vfp_common.missing_companions(fp)
+                if miss:
+                    missing_by_file[os.path.relpath(fp, self.source)] = miss
+        if missing_by_file:
+            listing = "; ".join("%s -> missing %s" % (f, ", ".join(os.path.basename(m) for m in ms))
+                                for f, ms in list(missing_by_file.items())[:10])
+            self.warnings.append(
+                "BIN2PRG will report 'Error 41' for these files (missing companion file); "
+                "copy the companion (.sct/.fpt/.pjt/.frt/.vct) next to the binary: %s"
+                % (listing if len(missing_by_file) <= 10 else listing + " ..."))
+
         py = sys.executable or "python"
         cmds = [
             [py, driver, "convert_dir", "--project", self.source,
@@ -175,10 +204,22 @@ class VFPProjectAuditor:
                 return
             if rc != 0:
                 err = (errb or b"").decode("utf-8", "replace")[:300]
+                detail = "see vfp_driver output"
+                if cmd[1].endswith("convert_dir"):
+                    # vfp_driver emits JSON with per-file rc/stderr — surface the
+                    # real causes (rc=41 missing companion, VFP9 COM errors, ...)
+                    try:
+                        payload = json.loads((outb or b"").decode("utf-8", "replace"))
+                        bad = [r for r in payload.get("data", {}).get("results", []) if not r.get("ok")]
+                        if bad:
+                            detail = "; ".join(
+                                "%s rc=%s %s" % (r.get("file"), r.get("rc"), r.get("stderr", "").strip()[:120])
+                                for r in bad[:5])
+                    except Exception:
+                        pass
+                hint = "If VFP9 (Visual FoxPro 9) is not installed, install it or use --skip-sync."
                 self.warnings.append(
-                    "BIN2PRG sync failed (rc=%s): %s — continuing without "
-                    "class/form analysis. Usually VFP9 is not installed."
-                    % (rc, err or "see vfp_driver output"))
+                    "BIN2PRG sync failed (rc=%s): %s. %s" % (rc, detail or err or "unknown error", hint))
                 return
 
     def _disk_table_set(self, dbf_schemas):
@@ -411,6 +452,28 @@ class VFPProjectAuditor:
 
     # ------------------------------------------------------------- DBF data
 
+    def _data_export_complete(self, dbf_files, fmts):
+        """True if every table already has a non-empty data file in the audit dir.
+
+        Real-run report #4: a second audit re-exported ALL tables (incl. a 2.7M-row,
+        1.6GB table) even though a previous run had already produced them. Checking
+        for existing output first makes the data export idempotent/resumable.
+        """
+        for dbf in dbf_files:
+            rel = os.path.relpath(os.path.dirname(dbf), self.source)
+            base = os.path.splitext(os.path.basename(dbf))[0]
+            relseg = [] if rel in (".", "") else [rel]
+            for fmt in fmts:
+                # per-table layout: <data>/<fmt>/<rel>/<base>.<fmt>
+                # full-tree dbfbridge layout: <data>/<rel>/<base>.<fmt>
+                candidates = [
+                    os.path.join(self.data_dir, fmt, *relseg, base + "." + fmt),
+                    os.path.join(self.data_dir, *relseg, base + "." + fmt),
+                ]
+                if not any(os.path.isfile(c) and os.path.getsize(c) > 0 for c in candidates):
+                    return False
+        return True
+
     def _export_dbf_data(self, dbf_exp, dbf_files):
         """Export DBF data (bounded by --max-tables: largest tables first).
 
@@ -428,6 +491,15 @@ class VFPProjectAuditor:
         self.data_export["formats"] = valid
         os.makedirs(self.data_dir, exist_ok=True)
 
+        # Idempotency (real-run report #4): if all tables already have complete
+        # data output from a previous run, skip the (expensive) re-export.
+        if self._data_export_complete(dbf_files, valid):
+            self.data_export["tables"] = len(dbf_files)
+            self.data_export["performed"] = True
+            self.data_export["skipped"] = "data files already present (idempotent skip)"
+            self.warnings.append("data export skipped: %d tables already fully exported" % len(dbf_files))
+            return
+
         has_bridge = dbf_exp._has_dbfbridge()
 
         if has_bridge and self.max_tables <= 0:
@@ -436,7 +508,8 @@ class VFPProjectAuditor:
             self.data_export["tables"] = len(dbf_files)
             try:
                 run, warnings = dbf_exp._dbfbridge_export_dir(
-                    self.source, self.data_dir, tuple(valid), "include")
+                    self.source, self.data_dir, tuple(valid), "include",
+                    validate=not self.no_validate)
                 for w in warnings:
                     self.warnings.append(w)
                 failed = [t for t in run.results if getattr(t, "status", "") == "FAILED"]
@@ -464,7 +537,8 @@ class VFPProjectAuditor:
                 tdir = os.path.join(fmt_dir, rel) if rel not in (".", "") else fmt_dir
                 os.makedirs(tdir, exist_ok=True)
                 try:
-                    count, data_file, warnings = dbf_exp.export_data(dbf, tdir, fmt, "include")
+                    count, data_file, warnings = dbf_exp.export_data(dbf, tdir, fmt, "include",
+                                                                     validate=not self.no_validate)
                     if data_file:
                         exported += 1
                     if warnings:
@@ -1192,6 +1266,13 @@ def main():
                     help="With --include-data: limit to N largest tables (0 = all)")
     ap.add_argument("--dbf-exclude", default="",
                     help="Comma-separated uppercase substrings to exclude from DBF scan (e.g. ARCH,TMP)")
+    ap.add_argument("--only-tables", default="",
+                    help="Only process DBF tables whose path contains one of these uppercase "
+                         "substrings (comma-separated, e.g. ARCH,TMP). Overrides the full scan.")
+    ap.add_argument("--no-validate", action="store_true",
+                    help="Export DBF data with dbfbridge validate=False (use when validate=True "
+                         "fails on a table, e.g. OSError 22). The tool already auto-retries "
+                         "without validation; this flag skips the validated pass entirely.")
     ap.add_argument("--no-cache-scan", action="store_true",
                     help="Do not scan .vfp-ai/source for table usage (slower but avoids double-scan)")
     a = ap.parse_args()

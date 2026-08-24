@@ -133,12 +133,21 @@ def _has_dbfread():
 # dbfbridge backend (preferred)
 # ---------------------------------------------------------------------------
 
-def _dbfbridge_export_table(dbf_path, out_dir, fmt, deleted):
+def _dbfbridge_export_table(dbf_path, out_dir, fmt, deleted, validate=True):
     """Export a single table (schema + data) using dbfbridge.
 
     Returns (table_info_dict, warnings). table_info mirrors the legacy schema dict
     and points at the dbfbridge schema/data files.
+
+    Real-run report #2: with validate=True a valid table can raise OSError 22
+    ("Invalid argument") and be marked FAILED. If that happens we transparently
+    retry with validate=False (dates/values checked separately) so the table is
+    not lost.
+
+    Real-run report #3: a transient "Permission denied" (Errno 13, e.g. an
+    antivirus briefly locking the file) is retried once before giving up.
     """
+    import time as _time
     from dbfbridge import export_dbf as _export
 
     dbf_path = os.path.abspath(dbf_path)
@@ -159,24 +168,66 @@ def _dbfbridge_export_table(dbf_path, out_dir, fmt, deleted):
     except ValueError:
         pass
 
-    try:
-        run = _export(
+    def _run(v):
+        return _export(
             dbf_path, run_out_dir,
             formats=(fmt,),
             memo="inline",
             deleted=deleted,
             missing_memo="null-with-warning",
             overwrite=True,
-            validate=True,
+            validate=v,
         )
+
+    warnings = []
+
+    def _run_with_retry(v, attempts=2):
+        """Run export; on a transient Permission-denied (Errno 13) wait and retry.
+
+        Real-run report #3: an antivirus/lock can briefly block the file; a single
+        retry after a short pause recovers it.
+        """
+        last = None
+        for i in range(attempts):
+            try:
+                return _run(v)
+            except OSError as e:
+                last = e
+                if getattr(e, "errno", None) in (13, 32) and i < attempts - 1:
+                    warnings.append("transient lock on %s (errno %s); retrying in 1.5s"
+                                    % (os.path.basename(dbf_path), e.errno))
+                    _time.sleep(1.5)
+        if last is not None:
+            raise last
+        raise OSError("export failed (no attempt succeeded)")
+
+    try:
+        try:
+            run = _run_with_retry(validate)
+        except OSError as e:
+            if validate:
+                warnings.append("dbfbridge validate=True raised OSError (%s); retrying with validate=False" % e)
+                run = _run_with_retry(False)
+            else:
+                raise
+
+        # If the run marked the table FAILED on a validation/OSError, retry once
+        # with validate=False so a perfectly valid file is not dropped (#2).
+        failed = [t for t in run.results if getattr(t, "status", "") == "FAILED"]
+        if validate and failed:
+            err_text = " ".join(str(e) for t in failed for e in (t.errors or []))
+            if ("OSError" in err_text) or ("Invalid argument" in err_text) or ("Errno 22" in err_text) or (not err_text):
+                warnings.append("dbfbridge reported FAILED with validate=True; retrying with validate=False")
+                try:
+                    run = _run_with_retry(False)
+                except OSError:
+                    pass
     finally:
         if run_out_dir != out_dir and os.path.isdir(run_out_dir):
             for fn in os.listdir(run_out_dir):
                 os.replace(os.path.join(run_out_dir, fn), os.path.join(out_dir, fn))
             os.rmdir(run_out_dir)
             moved_back = True
-
-    warnings = []
     failed = [t for t in run.results if getattr(t, "status", "") == "FAILED"]
     for t in failed:
         for e in (t.errors or []):
@@ -246,7 +297,7 @@ def _normalize_dbfbridge_schema(schema_raw, dbf_path, schema_file, run):
     }
 
 
-def _dbfbridge_export_dir(source_dir, out_dir, formats, deleted):
+def _dbfbridge_export_dir(source_dir, out_dir, formats, deleted, validate=True):
     """Export a whole directory tree of DBF files with a single dbfbridge run."""
     from dbfbridge import export_dbf as _export
 
@@ -261,7 +312,7 @@ def _dbfbridge_export_dir(source_dir, out_dir, formats, deleted):
         deleted=deleted,
         missing_memo="null-with-warning",
         overwrite=True,
-        validate=True,
+        validate=validate,
     )
 
     warnings = []
@@ -592,14 +643,14 @@ def export_schema(dbf_path, out_dir):
     return schema, schema_file, []
 
 
-def export_data(dbf_path, out_dir, fmt="jsonl", deleted="skip"):
+def export_data(dbf_path, out_dir, fmt="jsonl", deleted="skip", validate=True):
     """Export DBF records to <table>.<fmt> in out_dir. Returns (count, data_file, warnings)."""
     os.makedirs(out_dir, exist_ok=True)
     basename = os.path.splitext(os.path.basename(dbf_path))[0]
 
     if fmt in ("jsonl", "csv", "json", "xlsx") and _has_dbfbridge():
         try:
-            info, warnings = _dbfbridge_export_table(dbf_path, out_dir, fmt, deleted)
+            info, warnings = _dbfbridge_export_table(dbf_path, out_dir, fmt, deleted, validate=validate)
             if info and info.get("dataFile"):
                 return info.get("recordCount", 0), info["dataFile"], warnings
         except Exception as e:
