@@ -68,6 +68,18 @@ WScript.Echo "starting VisualFoxPro.Application.9 ..."
 Set oVFP9 = CreateObject("VisualFoxPro.Application.9")
 WScript.Echo "COM created"
 
+' --- STRICT READ-ONLY SAFETY (issues #1/#9 from real-run reports) ----------
+' SYS(2023) = "error file" : 0 disables .ERR file creation on VFP errors
+'   (FoxBin2Prg writes <file>.ERR into the working dir on rc<>0 — e.g. Error 41
+'    missing companion file — which would modify the SOURCE project directory).
+' SYS(1486) = "auto-build memo/index" : 0 disables VFP auto-building .fpt/.cdx
+'   (prevents the COM host from creating memo/index files next to the source).
+' Both are defensive; the toolchain also runs VBS with cwd in a scratch dir.
+On Error Resume Next
+oVFP9.DoCmd "SET SYS(2023, 0)"
+oVFP9.DoCmd "SET SYS(1486, 0)"
+On Error GoTo 0
+
 oVFP9.DoCmd "SET PROCEDURE TO " & q(cPrg)
 oVFP9.DoCmd "PUBLIC oFb"
 oVFP9.DoCmd "oFb = CREATEOBJECT('c_foxbin2prg')"

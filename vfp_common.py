@@ -81,3 +81,35 @@ def foxbin2prg_program():
     if not os.path.isabs(d):
         d = os.path.normpath(os.path.join(_HERE, d))
     return os.path.join(d, program_file)
+
+
+# Companion text/memo files that FoxBin2Prg (VFP9 COM) expects to exist NEXT TO
+# a binary before it will convert it (real-run report #1: "Error 41, missing
+# companion file"). Keyed by the binary extension.
+COMPANIONS = {
+    ".scx": (".sct",),
+    ".vcx": (".vct",),
+    ".frx": (".frt",),
+    ".mnx": (".mnt",),
+    ".pjx": (".pjt",),
+    ".dbf": (".fpt",),
+    ".lbx": (".lb2",),
+    ".dbc": (".dcx", ".dct"),
+}
+
+
+def required_companions(binary_path):
+    """Return the list of companion file paths required for a binary.
+
+    A .dbf only *requires* its .fpt if the table declares memo fields; we cannot
+    know that cheaply here, so callers should treat a missing .fpt as a
+    *warning* (export may still work) rather than a hard failure.
+    """
+    ext = os.path.splitext(binary_path)[1].lower()
+    base = os.path.splitext(binary_path)[0]
+    return [base + c for c in COMPANIONS.get(ext, ())]
+
+
+def missing_companions(binary_path):
+    """Return companion files (per required_companions) that do not exist."""
+    return [p for p in required_companions(binary_path) if not os.path.isfile(p)]

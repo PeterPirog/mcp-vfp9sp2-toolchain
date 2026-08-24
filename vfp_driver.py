@@ -126,11 +126,21 @@ def _convert_one(inp, ctype, out, cfg, prg, timeout=600):
     if not os.path.isfile(VBS):
         return {"ok": False, "rc": -1, "stderr": "vfp_convert.vbs not found at " + VBS, "stdout": ""}
     args = [cscript_path(), "//NoLogo", VBS, inp, ctype, out, cfg, prg]
-    cwd = os.path.dirname(os.path.abspath(inp)) or None
-    res = _run_process(args, timeout, cwd=cwd)
+    # Run with a scratch cwd so any VFP9 side-effect (e.g. .ERR / .fpt) is
+    # written next to the OUTPUT dir, never into the source project.
+    run_cwd = out or os.path.dirname(os.path.abspath(inp)) or None
+    res = _run_process(args, timeout, cwd=run_cwd)
     rc = _parse_rc(res["stdout"])
+    # Surface a missing companion file (e.g. .sct/.fpt) as an explicit reason —
+    # FoxBin2Prg returns rc=41 "missing companion" with an empty stderr, which
+    # used to be confusing (real-run report #1/#6).
+    missing = vfp_common.missing_companions(inp)
+    if rc == 41 and missing:
+        res["stderr"] = ("missing companion file(s) required by FoxBin2Prg: "
+                         + ", ".join(os.path.basename(m) for m in missing))
     return {"ok": rc == 0, "rc": rc, "stdout": res["stdout"], "stderr": res["stderr"],
-            "data": {"input": inp, "type": ctype, "out": out}}
+            "data": {"input": inp, "type": ctype, "out": out,
+                     "missingCompanions": [os.path.relpath(m, os.path.dirname(inp)) for m in missing]}}
 
 
 def run_convert(inp, ctype, out, cfg, prg, timeout=600):
@@ -160,7 +170,10 @@ def run_convert_dir(project, out, cfg, prg, timeout=600):
                 })
     ok_count = sum(1 for r in results if r["ok"])
     fail_count = len(results) - ok_count
-    emit(ok_count > 0 if results else True,
+    # Exit code reflects the outcome: 0 only when nothing failed. A partial
+    # batch (some ok, some failed) previously exited 0 (ok=True) while the JSON
+    # said rc=1 — hard to distinguish from a shell. Now any failure -> exit 2.
+    emit(fail_count == 0,
          rc=0 if fail_count == 0 else 1,
          data={"total": len(results), "ok": ok_count, "failed": fail_count, "results": results},
          stdout="", stderr="")
