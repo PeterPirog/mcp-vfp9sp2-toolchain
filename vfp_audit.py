@@ -60,13 +60,13 @@ class VFPProjectAuditor:
     EXCLUDE_DIRS = tuple(vfp_common.default_excludes())
 
     def __init__(self, source_dir, out_dir, skip_sync=False,
-                 include_data=False, data_formats=("jsonl",),
+                 include_data=True, data_formats=("jsonl",),
                  max_tables=0, dbf_exclude=(), scan_cache=True,
                  include_forms=True, no_validate=False, only_tables=()):
         self.source = os.path.abspath(source_dir)
         self.out = os.path.abspath(out_dir)
         self.skip_sync = skip_sync
-        self.include_data = include_data
+        self.include_data = include_data  # ON BY DEFAULT: full audit = everything
         self.data_formats = data_formats
         self.max_tables = max_tables  # 0 = all tables
         self.dbf_exclude = [p.strip().upper() for p in dbf_exclude if p.strip()]
@@ -302,7 +302,6 @@ class VFPProjectAuditor:
 
     def _table_size_mb(self, dbf_path):
         """Approximate on-disk size (MB) of a table incl. its .fpt memo file."""
-        """Approximate on-disk size (MB) of a table incl. its .fpt memo file."""
         size = 0
         try:
             size += os.path.getsize(dbf_path)
@@ -312,6 +311,41 @@ class VFPProjectAuditor:
         except OSError:
             pass
         return size / (1024.0 * 1024.0)
+
+    # -------------------------------------------------------------- indexes (CDX/IDX)
+
+    def _analyze_indexes(self, dbf_files):
+        """Parse .cdx/.idx structure for each table (+ expressions via VFP9 if
+        available). Returns {TABLE_UPPER: index_info}. Non-fatal on errors.
+        """
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        try:
+            import vfp_cdx
+        except Exception as e:
+            self.warnings.append("index analysis skipped (cannot import vfp_cdx): %s" % e)
+            return {}
+
+        analysis = {}
+        for dbf in dbf_files:
+            base = os.path.splitext(os.path.basename(dbf))[0].upper()
+            cdx_path = os.path.splitext(dbf)[0] + ".cdx"
+            idx_path = os.path.splitext(dbf)[0] + ".idx"
+            target = cdx_path if os.path.isfile(cdx_path) else (idx_path if os.path.isfile(idx_path) else None)
+            if target is None:
+                analysis[base] = {
+                    "table": base, "dbf": dbf, "indexFile": None,
+                    "hasStructuralIndex": False, "tagCount": 0, "tags": [],
+                    "note": "no .cdx/.idx companion file",
+                }
+                continue
+            try:
+                info = vfp_cdx.build_index_info(dbf, cdx_path=target, timeout=90)
+                info["table"] = base
+                analysis[base] = info
+            except Exception as e:
+                self.warnings.append("index analysis failed for %s: %s" % (base, e))
+                analysis[base] = {"table": base, "dbf": dbf, "error": str(e), "tags": []}
+        return analysis
 
     # ------------------------------------------------------------------- run
 
@@ -364,13 +398,17 @@ class VFPProjectAuditor:
         if self.include_forms:
             self._export_forms()
 
-        # 7. Generate database schema document
-        database_schema = self._build_database_schema(dbf_schemas)
+        # 6c. Index structure analysis (.cdx/.idx): tag names, sort order, type
+        #     and — when VFP9 is available — the index tag expressions.
+        index_analysis = self._analyze_indexes(dbf_files)
+
+        # 7. Generate database schema document (includes index tags)
+        database_schema = self._build_database_schema(dbf_schemas, index_analysis)
 
         # 8. Write audit report + JSON artifacts
         self._write_outputs(project_summary, database_schema,
                             table_relationships, class_analysis, cross_ref,
-                            duplicate_tables)
+                            duplicate_tables, index_analysis)
 
         return {
             "ok": True,
@@ -991,8 +1029,14 @@ class VFPProjectAuditor:
 
     # ------------------------------------------------------ database schema doc
 
-    def _build_database_schema(self, dbf_schemas):
-        """Build a consolidated database schema from DBF schemas."""
+    def _build_database_schema(self, dbf_schemas, index_analysis=None):
+        """Build a consolidated database schema from DBF schemas.
+
+        When index_analysis is provided, each table also carries its index
+        tags (name, sort order, type, expression when known) and the index
+        file; a summary is aggregated under "indexSummary".
+        """
+        index_analysis = index_analysis or {}
         tables = {}
         encodings = {}
 
@@ -1037,6 +1081,12 @@ class VFPProjectAuditor:
             key = _tkey(table_name)
             if key not in tables:
                 tables[key] = entry
+            # Attach index structure (tags, sort order, expressions) if known.
+            idx = index_analysis.get(key)
+            if idx and idx.get("tagCount", 0) > 0:
+                tables[key]["indexFile"] = idx.get("indexFile")
+                tables[key]["tagCount"] = idx.get("tagCount", 0)
+                tables[key]["indexes"] = idx.get("tags", [])
 
             cp = s.get("codePage")
             if cp:
@@ -1045,7 +1095,7 @@ class VFPProjectAuditor:
         # Rank tables by record count for quick overview
         ranked = sorted(tables.values(), key=lambda t: -(t.get("recordCount") or 0))
 
-        return {
+        result = {
             "schemaDate": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "tableCount": len(tables),
             "tables": sorted(tables.keys()),
@@ -1056,12 +1106,19 @@ class VFPProjectAuditor:
             ],
             "tablesDetail": tables,
         }
+        if index_analysis:
+            total_tags = sum(i.get("tagCount", 0) for i in index_analysis.values())
+            result["indexSummary"] = {
+                "tablesWithIndexes": sum(1 for i in index_analysis.values() if i.get("tagCount", 0) > 0),
+                "totalTags": total_tags,
+            }
+        return result
 
     # ----------------------------------------------------------------- output
 
     def _write_outputs(self, project_summary, database_schema,
                        table_relationships, class_analysis, cross_ref,
-                       duplicate_tables=None):
+                       duplicate_tables=None, index_analysis=None):
         """Write the Markdown report and all JSON artifacts to the output dir."""
         report_path = os.path.join(self.out, "audit_report.md")
         with open(report_path, "w", encoding="utf-8") as f:
@@ -1191,6 +1248,39 @@ class VFPProjectAuditor:
                             % (d["table"], d["copies"], d["primary"], backs))
                 f.write("\n")
 
+            if index_analysis:
+                idx_with = {k: v for k, v in index_analysis.items() if v.get("tagCount", 0) > 0}
+                f.write("## Indexes (CDX/IDX)\n\n")
+                f.write("- **Tables with indexes**: %d of %d\n"
+                        % (len(idx_with), len(index_analysis)))
+                f.write("- **Total index tags**: %d\n\n"
+                        % sum(v.get("tagCount", 0) for v in index_analysis.values()))
+                if idx_with:
+                    f.write("| Table | Tags | Index file | Expressions via |\n|---|---|---|---|\n")
+                    for name in sorted(idx_with):
+                        v = idx_with[name]
+                        ifile = v.get("indexFile") or ""
+                        reader = v.get("reader", "structural")
+                        f.write("| `%s` | %d | `%s` | %s |\n"
+                                % (name, v.get("tagCount", 0),
+                                   os.path.basename(ifile) if ifile else "-", reader))
+                    f.write("\n")
+                    # Detailed tag list for tables with few tags
+                    for name in sorted(idx_with):
+                        v = idx_with[name]
+                        tags = v.get("tags", [])
+                        if len(tags) > 20:
+                            continue
+                        f.write("### `%s` — %d tag(s)\n\n" % (name, len(tags)))
+                        f.write("| Tag | Sort | Type | Expression |\n|---|---|---|---|\n")
+                        for t in tags:
+                            expr = t.get("expression") or ""
+                            f.write("| %s | %s | %s | %s |\n"
+                                    % (t.get("tag", ""), t.get("sortOrder", ""),
+                                       t.get("type", ""),
+                                       ("`%s`" % expr) if expr else ""))
+                        f.write("\n")
+
             if table_relationships.get("topJoins"):
                 f.write("### Top Table Joins (by co-occurrence)\n\n")
                 f.write("| Table 1 | Table 2 | Files |\n|---|---|---|\n")
@@ -1233,6 +1323,9 @@ class VFPProjectAuditor:
                 json.dump(duplicate_tables, f, indent=2, ensure_ascii=False)
         with open(os.path.join(self.out, "forms_export.json"), "w", encoding="utf-8") as f:
             json.dump(self.forms_export, f, indent=2, ensure_ascii=False)
+        if index_analysis:
+            with open(os.path.join(self.out, "indexes.json"), "w", encoding="utf-8") as f:
+                json.dump(index_analysis, f, indent=2, ensure_ascii=False)
 
         return report_path
 
@@ -1246,10 +1339,15 @@ def main():
     ap.add_argument("--skip-sync", action="store_true",
                     help="Skip automatic BIN2PRG sync (use an existing .vfp-ai cache). "
                          "By default the audit syncs first if the cache is missing.")
-    ap.add_argument("--include-data", action="store_true",
-                    help="OPTIONAL / SLOW: also export ALL DBF record data (incl. memo/FPT) "
-                         "to <audit>/dbf, mirroring the project's folder structure. "
-                         "This reads every table and can take a long time and fill disk.")
+    ap.add_argument("--include-data", action="store_true", default=True,
+                    help="Export ALL DBF record data (incl. memo/FPT) to <audit>/dbf, "
+                         "mirroring the project's folder structure. ON BY DEFAULT — "
+                         "a default audit captures everything. SLOW / disk-heavy on "
+                         "large projects; disable with --no-include-data for a "
+                         "schema-only audit.")
+    ap.add_argument("--no-include-data", dest="include_data", action="store_false",
+                    help="Skip the full DBF data export (schema + structure only). "
+                         "Faster and much smaller output; use for quick analysis.")
     ap.add_argument("--include-forms", action="store_true", default=True,
                     help="Export the FULL source of every form, class and method "
                          "(button Click handlers, PROCEDURE/Function bodies) from the "
@@ -1293,6 +1391,8 @@ def main():
         dbf_exclude=excludes,
         scan_cache=not a.no_cache_scan,
         include_forms=a.include_forms,
+        no_validate=a.no_validate,
+        only_tables=tuple(x for x in a.only_tables.split(",") if x),
     )
 
     try:

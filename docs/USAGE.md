@@ -76,7 +76,8 @@ py vfp_driver.py audit     --source <project> --out <audit_output> [--include-da
 | Flag | Default | Meaning |
 |---|---|---|
 | `--skip-sync` | off | Do not auto-run BIN2PRG sync; use an existing `.vfp-ai` cache |
-| `--include-data` | off | Export full DBF record data (slow, disk-heavy) to `<out>/dbf` |
+| `--include-data` | **on** | Export full DBF record data (slow, disk-heavy) to `<out>/dbf`. **ON BY DEFAULT** — disable with `--no-include-data` for a schema-only audit |
+| `--no-include-data` | off | Skip the full DBF data export (fast, small output; schema + indexes + structure only) |
 | `--data-formats` | `jsonl` | `jsonl,csv,json,xlsx` (with `--include-data`) |
 | `--max-tables` | `0` | Limit `--include-data` to the N largest tables |
 | `--only-tables` | `""` | Only process tables whose path contains one of these uppercase substrings (e.g. `ARCH,TMP`) |
@@ -84,6 +85,24 @@ py vfp_driver.py audit     --source <project> --out <audit_output> [--include-da
 | `--no-validate` | off | Export data with `validate=False` (if `validate=True` fails; the tool already auto-retries without validation) |
 | `--no-include-forms` | off | Skip the `forms/` export (on by default) |
 | `--no-cache-scan` | off | Do not scan `.vfp-ai/source` for table usage |
+
+### CDX/IDX index analysis
+
+The audit includes an automatic **index structure analysis** for every table that has a
+`.cdx` (compound) or `.idx` (single-tag) companion file. Each table in `database_schema.json`
+carries its `indexFile`, `tagCount` and the full `indexes` list (tag name, sort order, type — and the
+index **expression** when VFP9 is available). The consolidated result is also written to `indexes.json`
+and rendered as a Markdown table in `audit_report.md`.
+
+You can also analyze indexes standalone (no audit, no VFP9 required for structure):
+
+```bash
+# One table (structure + expressions when VFP9 is present)
+opencode vfp_analyze_cdx --dbf <project>\DANE\user.dbf
+
+# Whole project — structural scan of every .cdx/.idx
+opencode vfp_scan_cdx --directory <project>
+```
 
 ## Running the tests
 

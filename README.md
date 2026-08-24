@@ -152,7 +152,7 @@ opencode vfp_find_symbol     # "Find class 'myBaseForm'"
 
 An **agent** is a pre-configured persona. Place `.md` files in `~/.config/opencode/agents/`. Each file becomes an agent you can invoke with `@agent-name`. The `@vfp-analyst` agent knows about VFP project structure, FoxBin2Prg output format, and the 15 tools this repo provides. It acts as an expert VFP developer assistant inside OpenCode.
 
-### 15 Tools This Repo Provides
+### 17 Tools This Repo Provides
 
 | Tool | What it does | VFP9 required? |
 |---|---|---|
@@ -170,7 +170,9 @@ An **agent** is a pre-configured persona. Place `.md` files in `~/.config/openco
 | `vfp_export_table` | Export DBF schema to JSON + optional data to JSONL/CSV (pure Python, no VFP9) | ❌ No |
 | `vfp_list_tables` | Lists all DBF tables in a directory tree with field/record counts | ❌ No |
 | `vfp_export_dir` | Batch-export a whole directory tree of DBF tables (schema + data, memo/FPT) — no VFP9 | ❌ No |
-| `vfp_audit` | Comprehensive audit: sync + DBF schema + table relationships + class analysis → target directory | ⚠️ Partial |
+| `vfp_audit` | **Full audit**: sync + schema + data + forms + CDX/IDX indexes + table relationships + class analysis → target directory | ⚠️ Partial |
+| `vfp_analyze_cdx` | Analyze one table's index structure (.cdx/.idx): tags, sort order, type, expressions (VFP9) | ❌ No (structure) |
+| `vfp_scan_cdx` | Scan a directory tree for .cdx/.idx files and structurally parse each | ❌ No |
 
 ---
 
@@ -424,37 +426,41 @@ opencode vfp_list_tables --directory /path/to/vfp/project
 The `vfp_audit` tool consolidates everything into a single output directory:
 
 ```bash
-# Full audit (needs VFP9 for BIN2PRG, DBF schema export works without)
+# FULL AUDIT (DEFAULT) — everything: sync + schema + form/class code + ALL table data
+# + CDX/IDX index structure + table relationships + class hierarchy.
+# Data lands in <audit_output>/dbf, indexes in <audit_output>/indexes.json.
+# A default audit captures EVERYTHING — that's the point.
 opencode vfp_audit --source <project> --out <audit_output>
 
-# Audit without VFP9 (schema + relationships only, uses existing cache)
+# FAST / SMALL: schema + structure + indexes only, NO table data
+opencode vfp_audit --source <project> --out <audit_output> --no-include-data
+
+# Audit without VFP9 (schema + relationships + indexes only, uses existing cache)
 opencode vfp_audit --source <project> --out <audit_output> --skip-sync
 
-# OPTIONAL / SLOW: audit + FULL DBF DATA export (reads every table's contents incl. memo/FPT)
-# Data lands in <audit_output>/dbf, mirroring the project's folder structure.
-# This is the most time-consuming / disk-heavy mode — only use when you need the data itself.
-opencode vfp_audit --source <project> --out <audit_output> --include-data --data-formats jsonl,csv
+# Extra data formats (default: jsonl)
+opencode vfp_audit --source <project> --out <audit_output> --data-formats jsonl,csv
 
 # Limit the data export to the N largest tables (0 = all)
-opencode vfp_audit --source <project> --out <audit_output> --include-data --max-tables 20
+opencode vfp_audit --source <project> --out <audit_output> --max-tables 20
 
 # Only audit tables matching specific name substrings (uppercase)
-opencode vfp_audit --source <project> --out <audit_output> --include-data --only-tables ARCH,TMP
+opencode vfp_audit --source <project> --out <audit_output> --only-tables ARCH,TMP
 
-# Full audit including form/class code (DEFAULT ON, no extra flag needed;
-# use --no-include-forms to skip)
-opencode vfp_audit --source <project> --out <audit_output>
+# Skip the form/class code export (on by default)
+opencode vfp_audit --source <project> --out <audit_output> --no-include-forms
 ```
 
 **What gets generated in the output directory:**
-- `audit_report.md` — Human-readable Markdown summary
-- `data_export.json` — What the optional data export did (dir, tables, formats)
+- `audit_report.md` — Human-readable Markdown summary (includes an Indexes section with per-table tag tables)
+- `data_export.json` — What the data export did (dir, tables, formats)
 - `project_summary.json` — File inventory, class/method counts
-- `database_schema.json` — All DBF table schemas with encodings, fields, types
+- `database_schema.json` — All DBF table schemas with encodings, fields, types **and index tags (name, sort, type, expression when known)**
+- `indexes.json` — Consolidated CDX/IDX index structure for every table (tag list + expressions)
 - `table_relationships.json` — Table usage patterns, SQL SELECT/INSERT/REPLACE, inferred joins
 - `class_analysis.json` — Class hierarchy, inheritance depth, complexity ranking
 - `forms/` — full source of every form/class/method + PRG scripts (ON by default; `--no-include-forms` to skip)
-- `dbf/` — individual `<table>_schema.json` files for each DBF; **with `--include-data`** also the full JSONL table contents (incl. memo), mirroring the project tree
+- `dbf/` — individual `<table>_schema.json` files for each DBF; with `--include-data` (**ON by default**) also the full JSONL table contents (incl. memo), mirroring the project tree
 
 ### Via @vfp-analyst Agent
 
@@ -635,7 +641,7 @@ Run `vfp_audit --include-data --include-forms` once and the resulting directory 
 
 | Missing | Why | For rewrite: |
 |---|---|---|
-| **CDX index structure** | Binary index files, not converted | Recreate index strategy manually |
+| **CDX index structure** | ✅ **Now captured** — tag names, sort order, type and (with VFP9) index expressions are analyzed per table in `database_schema.json` / `indexes.json`. Use `vfp_analyze_cdx` for a single table or `vfp_scan_cdx` for a whole tree. | Rebuild from the captured tag list + expressions |
 | **DBC database containers** | Not fully parsed (constraints, relationships) | Extract separately with DBC tools |
 
 ### For a complete application rewrite, you need:
