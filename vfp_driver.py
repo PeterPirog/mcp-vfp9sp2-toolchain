@@ -289,6 +289,43 @@ def run_dbf_dir(source, out, formats, deleted):
         emit(False, stderr="dbf_dir batch export failed: %s" % e)
 
 
+def run_cdx_info(dbf, cdx=None, timeout=120):
+    """Describe one table's index structure (.cdx/.idx) + index expressions.
+
+    Structural parsing is pure Python (no VFP9). When VFP9 is available,
+    tag expressions are read via the read-only COM host.
+    """
+    sys.path.insert(0, HERE)
+    try:
+        import vfp_cdx
+    except Exception as e:
+        emit(False, stderr="cannot import vfp_cdx: %s" % e)
+    if not os.path.isfile(dbf):
+        emit(False, stderr="dbf not found: " + dbf)
+    try:
+        info = vfp_cdx.build_index_info(dbf, cdx_path=cdx, timeout=timeout)
+        emit(True, rc=0, data=info, stdout="", stderr="")
+    except Exception as e:
+        emit(False, stderr="cdx_info failed: %s" % e)
+
+
+def run_cdx_scan(source_dir, timeout=120):
+    """Scan a project tree for .cdx/.idx files and structurally parse each."""
+    sys.path.insert(0, HERE)
+    try:
+        import vfp_cdx
+    except Exception as e:
+        emit(False, stderr="cannot import vfp_cdx: %s" % e)
+    try:
+        results = vfp_cdx.parse_dir(source_dir)
+        ok_count = sum(1 for r in results if r.get("ok"))
+        emit(ok_count > 0, rc=0 if ok_count else 1,
+             data={"total": len(results), "parsed": ok_count, "results": results},
+             stdout="", stderr="")
+    except Exception as e:
+        emit(False, stderr="cdx_scan failed: %s" % e)
+
+
 def run_audit(source, out, skip_sync, include_data, data_formats,
              max_tables=0, dbf_exclude="", no_cache_scan=False,
              include_forms=True):
@@ -361,6 +398,14 @@ def main():
     pl = sub.add_parser("dbf_list", help="List all DBF files in a directory tree (no VFP9 needed)")
     pl.add_argument("--dir", required=True, help="Directory to scan")
 
+    pcdi = sub.add_parser("cdx_info", help="Describe one table's index structure (.cdx/.idx) + tag expressions")
+    pcdi.add_argument("--dbf", required=True, help="Path to the .dbf file")
+    pcdi.add_argument("--cdx", default=None, help="Explicit .cdx/.idx (default: <dbf stem>.cdx)")
+    pcdi.add_argument("--timeout", type=int, default=120, help="COM enrichment timeout (s)")
+
+    pcds = sub.add_parser("cdx_scan", help="Scan a directory tree for .cdx/.idx files and parse each (no VFP9 needed)")
+    pcds.add_argument("--dir", required=True, help="Directory to scan")
+
     pdt = sub.add_parser("dbf_dir", help="Batch-export a whole directory tree of DBF files (no VFP9 needed)")
     pdt.add_argument("--source", required=True, help="Directory containing .dbf files")
     pdt.add_argument("--out", required=True, help="Output directory (mirrors the source tree)")
@@ -397,6 +442,10 @@ def main():
         run_dbf_data(a.input, a.out, a.format, a.deleted)
     elif a.cmd == "dbf_list":
         run_dbf_list(a.dir)
+    elif a.cmd == "cdx_info":
+        run_cdx_info(a.dbf, a.cdx, a.timeout)
+    elif a.cmd == "cdx_scan":
+        run_cdx_scan(a.dir)
     elif a.cmd == "dbf_dir":
         run_dbf_dir(a.source, a.out, a.formats, a.deleted)
     elif a.cmd == "audit":

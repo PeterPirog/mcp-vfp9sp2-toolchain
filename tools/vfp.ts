@@ -593,22 +593,25 @@ export const vfp_export_dir = tool({
 
 export const vfp_audit = tool({
   description:
-    "Run a comprehensive audit of a VFP project: BIN2PRG sync (if VFP9 available) + DBF schema export + table relationship analysis + class hierarchy analysis. Outputs a consolidated audit report to a target directory. DBF schema analysis works WITHOUT VFP9. " +
+    "Run a comprehensive audit of a VFP project: BIN2PRG sync (if VFP9 available) + DBF schema export + table relationship analysis + class hierarchy analysis + CDX/IDX index structure (tags, sort order, expressions) + form/class code. Outputs a consolidated audit report to a target directory. DBF schema + index structure analysis works WITHOUT VFP9. " +
     "includeForms (default true): export the FULL source of every form/class/method (button Click handlers, PROCEDURE/Function bodies) + PRG scripts to <out>/forms — makes the audit self-contained for form reconstruction without FoxPro. " +
-    "OPTIONAL includeData: reads the FULL contents of every table (incl. memo/FPT) and writes it to <out>/dbf mirroring the project folder structure — this is slow and disk-heavy, use only when the data itself is needed.",
+    "includeData (default TRUE): reads the FULL contents of every table (incl. memo/FPT) and writes it to <out>/dbf mirroring the project folder structure. A DEFAULT audit captures EVERYTHING (forms + data + indexes + relationships). Set includeData=false for a fast schema-only audit.",
   args: {
     source: tool.schema.string().describe("Source directory of the VFP project to audit."),
-    out: tool.schema.string().describe("Target directory where audit output will be written (schema JSON, forms, data, relationships, Markdown report)."),
+    out: tool.schema.string().describe("Target directory where audit output will be written (schema JSON, forms, data, indexes, relationships, Markdown report)."),
     skipSync: tool.schema.boolean().optional().describe("Skip the automatic BIN2PRG sync. By default the audit runs a sync first if the .vfp-ai cache is missing (class/form analysis needs it)."),
     includeForms: tool.schema.boolean().optional().describe(
       "Export the FULL source of every form/class/method (button Click handlers, PROCEDURE/Function bodies) + PRG scripts to <out>/forms. " +
       "ON BY DEFAULT. Set false to skip (faster, smaller audit)."),
     includeData: tool.schema.boolean().optional().describe(
-      "OPTIONAL / SLOW: also export the FULL contents of every DBF table (incl. memo/FPT) to <out>/dbf, mirroring the project folder structure. " +
-      "Reads every table and can take a long time and use a lot of disk. Default false (schema only)."),
+      "Export the FULL contents of every DBF table (incl. memo/FPT) to <out>/dbf, mirroring the project folder structure. " +
+      "ON BY DEFAULT (a default audit captures everything). SLOW and disk-heavy on large projects — " +
+      "set false for a fast schema-only audit."),
     dataFormats: tool.schema.string().optional().describe("When includeData=true, comma-separated data formats: 'jsonl', 'csv', 'json', 'xlsx'. Default: 'jsonl'."),
     maxTables: tool.schema.number().optional().describe("With includeData=true, limit export to N largest tables (0 = all). Default 0."),
     dbfExclude: tool.schema.string().optional().describe("Comma-separated uppercase substrings to exclude from the DBF scan (e.g. 'ARCH,TMP'). Default empty."),
+    onlyTables: tool.schema.string().optional().describe("Only process DBF tables whose path contains one of these uppercase substrings (comma-separated, e.g. 'ARCH,TMP')."),
+    noValidate: tool.schema.boolean().optional().describe("Export DBF data with validate=False (skip the validated pass; use when validate=True fails)."),
     noCacheScan: tool.schema.boolean().optional().describe("Do not scan .vfp-ai/source for table usage."),
   },
   async execute(args, context) {
@@ -618,10 +621,12 @@ export const vfp_audit = tool({
     const cmd = [py, DRIVER, "audit", "--source", args.source, "--out", args.out]
     if (args.skipSync) cmd.push("--skip-sync")
     if (args.includeForms === false) cmd.push("--no-include-forms")
-    if (args.includeData) cmd.push("--include-data")
+    if (args.includeData === false) cmd.push("--no-include-data")
     if (args.dataFormats) cmd.push("--data-formats", args.dataFormats)
     if (args.maxTables !== undefined && args.maxTables !== null) cmd.push("--max-tables", String(args.maxTables))
     if (args.dbfExclude) cmd.push("--dbf-exclude", args.dbfExclude)
+    if (args.onlyTables) cmd.push("--only-tables", args.onlyTables)
+    if (args.noValidate) cmd.push("--no-validate")
     if (args.noCacheScan) cmd.push("--no-cache-scan")
 
     const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
@@ -629,6 +634,42 @@ export const vfp_audit = tool({
     const err = await new Response(p.stderr).text()
     const rc = await p.exited
     if (rc !== 0) throw new Error(err || `audit exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
+export const vfp_analyze_cdx = tool({
+  description:
+    "Analyze the index structure of a VFP table (.cdx compound or .idx single-tag index): tag names, sort order, index type, and — when VFP9 is available — the index tag EXPRESSIONS. " +
+    "Pure structural parsing works WITHOUT VFP9 (any platform). VFP9 is used best-effort only to read the index expressions. Returns a JSON object with the tag list.",
+  args: {
+    dbf: tool.schema.string().describe("Path to the .dbf file whose index to analyze."),
+    cdx: tool.schema.string().optional().describe("Explicit .cdx/.idx path (default: <dbf stem>.cdx beside the table)."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "cdx_info", "--dbf", args.dbf]
+    if (args.cdx) cmd.push("--cdx", args.cdx)
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `cdx_info exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
+export const vfp_scan_cdx = tool({
+  description:
+    "Scan a directory tree for .cdx/.idx index files and structurally parse each one (tag names, sort order, type). Works WITHOUT VFP9. Returns a list of parsed index files.",
+  args: {
+    directory: tool.schema.string().describe("Project root to scan for .cdx/.idx files."),
+  },
+  async execute(args, _context) {
+    const p = Bun.spawn([py, DRIVER, "cdx_scan", "--dir", args.directory], { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `cdx_scan exit ${rc}`)
     return JSON.parse(out.trim())
   },
 })

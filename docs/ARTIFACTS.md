@@ -8,9 +8,10 @@ summary; the JSON files are the machine-readable detail.
 
 | File | Purpose |
 |---|---|
-| `audit_report.md` | Human-readable summary (versions, inventory, top classes, joins, duplicates, warnings) |
+| `audit_report.md` | Human-readable summary (versions, inventory, top classes, joins, duplicates, **indexes**, warnings) |
 | `project_summary.json` | File inventory by extension + index stats |
-| `database_schema.json` | All DBF table schemas, encodings, top tables by records |
+| `database_schema.json` | All DBF table schemas, encodings, top tables by records **+ index tags per table** |
+| `indexes.json` | CDX/IDX index structure per table: tags, sort order, type, expressions (when VFP9 available) |
 | `table_relationships.json` | Table usage patterns, SQL statements, inferred joins |
 | `class_analysis.json` | Class hierarchy, inheritance depth, complexity ranking |
 | `cross_reference.json` | Tables referenced in code vs. tables on disk |
@@ -18,7 +19,7 @@ summary; the JSON files are the machine-readable detail.
 | `forms_export.json` | What the `forms/` export produced (files, bytes, by type) |
 | `data_export.json` | What the `--include-data` export produced |
 | `forms/` | Full form/class/method source + PRG scripts (on by default) |
-| `dbf/` | Per-table `<table>_schema.json`; with `--include-data`, full record JSONL |
+| `dbf/` | Per-table `<table>_schema.json`; with `--include-data` (**default on**), full record JSONL |
 
 ## Schemas
 
