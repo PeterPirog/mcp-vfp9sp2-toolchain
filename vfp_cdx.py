@@ -5,67 +5,122 @@ vfp_cdx.py - VFP compound index (.CDX / .IDX) structure analysis.
 
 Two layers:
   1. STRUCTURAL (pure Python, no VFP9, any platform):
-     parses the CDX header, tag directory (names, sort order, tag type,
-     block counts) and validates the B-tree geometry. Works on .cdx and
-     single-tag .idx files.
+     Scans 512-byte blocks to find tag descriptors. Each tag descriptor
+     contains the tag name (10 bytes, null-padded ASCII), sort order, type
+     flags, and root B-tree block pointer. Works on .cdx and .idx files.
   2. ENRICHMENT (VFP9 COM host, Windows, strictly read-only):
-     opens the table in a scratch alias and reads each tag's index
-     EXPRESSION and UNIQUE flag from the system metadata
-     (_GETTAG / _GETFLD). If VFP9 is absent or the table cannot be
-     opened, the structural result is returned as-is.
+     Opens the table in a scratch alias and reads each tag's index
+     EXPRESSION via SYST(325). If VFP9 is absent, the structural result
+     is returned as-is.
+
+CDX file format (FoxPro 2.x / VFP 9):
+  - File is organized in fixed 512-byte blocks.
+  - Block 0: file header (signature, pointers — format varies by VFP version).
+  - Tag descriptors are 512-byte blocks scattered through the file. Each has:
+      Bytes 0x00-0x09: tag name (10 bytes, null-padded, ASCII)
+      Byte  0x0A:      sort order (0=ascending, 1=descending, 2=descending)
+      Byte  0x0B:      type/flags (bit 0x02=unique, bit 0x20=descending)
+      Bytes 0x0C-0x0F: root B-tree node block number (int32 LE)
+  - B-tree nodes and expression text blocks are interleaved.
+  - The header does NOT reliably store a tag count (it varies by VFP version),
+    so we scan all blocks and identify tag descriptors by signature.
 
 Read-only guarantees:
   - The structural parser only ever *reads* bytes from the index file.
   - The COM path sets SET SYS(2023,0) (no .ERR files) and SET SYS(1486,0)
     (no auto .fpt/.cdx rebuilds), uses a scratch alias, and the process
-    cwd is redirected away from the source directory. The table is always
-    closed before the VFP9 host exits (DEFERRED UPDATES OFF, no writes).
+    cwd is redirected away from the source directory.
 """
 
 import os
+import struct
 
-_TAG_BLOCK = 132
-_FIRST_NODE = 14 + _TAG_BLOCK  # bytes per node (26 key pointers + 1 child pointer)
-_KEY_PER_NODE = 26
+BLOCK_SIZE = 512
 
-# CDX tag type byte (FoxPro 3+/VFP documented layout)
-TAG_TYPES = {
-    0x12: "regular",
-    0x29: "sql_index",
-    0x2A: "sql_unique",
-}
+# Valid sort order byte values
+_VALID_SORT = {0, 1, 2}
+
+# Valid type/flag byte values (combinations seen in real CDX files)
+_VALID_TYPE = {0x00, 0x01, 0x02, 0x10, 0x20, 0x12, 0x29, 0x2A, 0x30}
 
 
-def _parse_tag_block(data, i):
-    """Parse one 132-byte tag directory entry. Returns dict or None."""
-    off = i * _TAG_BLOCK
-    if off + _TAG_BLOCK > len(data):
+def _safe_name(data, offset, maxlen=10):
+    """Extract a null-padded ASCII name from data at the given offset."""
+    raw = data[offset:offset + maxlen]
+    # Cut at first null
+    for i in range(len(raw)):
+        if raw[i] == 0:
+            raw = raw[:i]
+            break
+    name = raw.decode("latin-1", "replace").strip()
+    return name
+
+
+def _is_valid_tag_name(name):
+    """Check if a string looks like a valid VFP tag name.
+
+    VFP tag names are 1-10 characters, alphanumeric + underscore.
+    This filters out FOR-expression text blocks that happen to start with
+    a readable string (e.g. '.NOT.DELETED()').
+    """
+    if not name or len(name) > 10:
+        return False
+    return all(c.isalnum() or c == "_" for c in name)
+
+
+def _parse_tag_descriptor(data, block_index, total_blocks):
+    """Parse one 512-byte block as a tag descriptor. Returns dict or None.
+
+    A real tag descriptor has:
+      - Valid ASCII tag name in bytes 0-9 (alphanumeric + underscore)
+      - Sort order byte (0x0A) in {0, 1, 2}
+      - Type/flags byte (0x0B) in the known set
+      - Root block (0x0C-0x0F) either 0 or a valid block number
+      - No readable text right after the name (bytes 10-19 are 0x00) — this
+        distinguishes tag descriptors from FOR-expression text blocks which
+        have the tag name followed by expression text.
+    """
+    off = block_index * BLOCK_SIZE
+    if off + BLOCK_SIZE > len(data):
         return None
-    name_b = data[off:off + 10]
-    if not any(b for b in name_b):
+
+    name = _safe_name(data, off, 10)
+    if not _is_valid_tag_name(name):
         return None
-    name = name_b.split(b"\x00", 1)[0].decode("latin-1", "replace").strip()
-    order = data[off + 10]
-    tag_type = data[off + 11]
-    # Block 0 (root) of this tag is stored at off+11+10 and holds:
-    #   4-byte node count (first field), then 4-byte node pointers.
-    root_node = off + 21
-    if root_node + 4 > len(data):
-        node_count = None
-    else:
-        node_count = int.from_bytes(data[root_node:root_node + 4], "little")
-    # Best-effort key/record estimate: root holds up to 26 keys; the rest
-    # of the tag's node blocks each hold 26 key records.
-    tag_len = (len(data) - off) // _FIRST_NODE
-    node_count = node_count if node_count is not None and node_count > 0 else tag_len
-    records = (node_count - 1) * _KEY_PER_NODE if node_count and node_count > 1 else 0
+
+    # Check bytes 10-19: if there's readable text, this is a FOR-expression
+    # block (tag name + expression text), not a tag descriptor.
+    after_name = data[off + 10:off + 20]
+    if any(32 <= b < 127 for b in after_name):
+        return None
+
+    sort_byte = data[off + 0x0A]
+    type_byte = data[off + 0x0B]
+    root_block = struct.unpack_from("<I", data, off + 0x0C)[0]
+
+    if sort_byte not in _VALID_SORT:
+        return None
+    if type_byte not in _VALID_TYPE:
+        return None
+    if root_block != 0 and root_block >= total_blocks:
+        return None
+
+    sort_order = "ascending"
+    if sort_byte in (1, 2) or (type_byte & 0x20):
+        sort_order = "descending"
+
+    tag_type = "regular"
+    if type_byte & 0x02:
+        tag_type = "unique"
+    if type_byte in (0x29, 0x2A):
+        tag_type = "sql_" + ("unique" if type_byte == 0x2A else "index")
+
     return {
         "tag": name,
-        "sortOrder": "descending" if order == 2 else "ascending",
-        "type": TAG_TYPES.get(tag_type, "unknown(0x%02x)" % tag_type),
-        "tagTypeByte": "0x%02x" % tag_type,
-        "nodeCount": node_count,
-        "recordEstimate": records,
+        "sortOrder": sort_order,
+        "type": tag_type,
+        "tagTypeByte": "0x%02x" % type_byte,
+        "rootBlock": root_block,
     }
 
 
@@ -82,41 +137,59 @@ def parse_cdx(path):
     except OSError as e:
         return {"ok": False, "file": os.path.basename(path), "error": str(e)}
 
-    if size < 14:
+    if size < BLOCK_SIZE:
         return {"ok": False, "file": os.path.basename(path),
-                "error": "file too small to be a CDX/IDX (%d bytes)" % size}
+                "error": "file too small to be a CDX/IDX (%d bytes, need >= %d)" % (size, BLOCK_SIZE)}
 
-    version = data[1]
-    if version not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
-        return {"ok": False, "file": os.path.basename(path),
-                "error": "unexpected CDX version byte 0x%02x" % version}
+    total_blocks = size // BLOCK_SIZE
 
-    total_records = int.from_bytes(data[4:8], "little")
-    if total_records == 0:
-        return {"ok": False, "file": os.path.basename(path),
-                "error": "zero tags in tag directory"}
-    if (len(data) - 14) % _TAG_BLOCK != 0:
-        # not a clean tag-directory layout — treat as non-CDX (best effort)
-        return {"ok": False, "file": os.path.basename(path),
-                "error": "size is not a multiple of the 132-byte tag block layout"}
-
-    is_compound = total_records > 1
+    # Scan all blocks for tag descriptors
     tags = []
-    for i in range(total_records):
-        t = _parse_tag_block(data, i)
+    for block in range(1, total_blocks):
+        t = _parse_tag_descriptor(data, block, total_blocks)
         if t is not None:
             tags.append(t)
 
-    return {
-        "ok": True,
-        "file": os.path.basename(path),
-        "isCompound": is_compound,
-        "version": version,
-        "tagCount": len(tags),
-        "tags": tags,
-        "sizeBytes": size,
-        "reader": "structural-pure-python",
-    }
+    ext = os.path.splitext(path)[1].lower()
+
+    if tags:
+        return {
+            "ok": True,
+            "file": os.path.basename(path),
+            "isCompound": len(tags) > 1,
+            "version": data[0],
+            "tagCount": len(tags),
+            "tags": tags,
+            "sizeBytes": size,
+            "blockSize": BLOCK_SIZE,
+            "totalBlocks": total_blocks,
+            "reader": "structural-pure-python",
+        }
+
+    # .idx single-tag: no tag descriptor found, report implicit tag
+    if ext == ".idx":
+        tag_name = os.path.splitext(os.path.basename(path))[0]
+        return {
+            "ok": True,
+            "file": os.path.basename(path),
+            "isCompound": False,
+            "version": data[0],
+            "tagCount": 1,
+            "tags": [{
+                "tag": tag_name,
+                "sortOrder": "ascending",
+                "type": "regular",
+                "tagTypeByte": "0x00",
+                "rootBlock": None,
+            }],
+            "sizeBytes": size,
+            "blockSize": BLOCK_SIZE,
+            "totalBlocks": total_blocks,
+            "reader": "structural-pure-python-idx",
+        }
+
+    return {"ok": False, "file": os.path.basename(path),
+            "error": "no tag descriptors found (size=%d, blocks=%d)" % (size, total_blocks)}
 
 
 def parse_dir(source_dir):
@@ -140,7 +213,7 @@ def parse_dir(source_dir):
 def _enrich_via_com(dbf_path, out_dir, timeout=120):
     """Best-effort enrichment of index tag expressions via the VFP9 COM host.
 
-    Returns {tag_name_lower: {"expression":..., "unique":...}} or None when
+    Returns {tag_name_upper: {"expression":...}} or None when
     VFP9 / the table is unavailable. Never writes to the source directory:
     cwd is the output dir and SYS(2023/1486) are disabled inside VFP9.
     """
@@ -205,19 +278,19 @@ def build_index_info(dbf_path, cdx_path=None, timeout=120):
         if structural.get("ok"):
             result["structure"] = structural
             result["tagCount"] = structural["tagCount"]
+            result["tags"] = structural.get("tags", [])
         else:
             result["structureError"] = structural.get("error", "unparseable")
 
     enriched = _enrich_via_com(dbf_path, out_dir=os.path.dirname(os.path.abspath(__file__)), timeout=timeout)
-    if enriched and result.get("structure"):
+    if enriched and result.get("tags"):
         merged = 0
-        for t in result["structure"]["tags"]:
+        for t in result["tags"]:
             e = enriched.get(t["tag"].upper())
             if e:
                 t["expression"] = e.get("expression")
-                t["unique"] = e.get("unique")
                 merged += 1
-        result["expressionCoverage"] = "%d/%d tags" % (merged, len(result["structure"]["tags"]))
+        result["expressionCoverage"] = "%d/%d tags" % (merged, len(result["tags"]))
         result["reader"] = "structural + vfp9-com"
     else:
         result["reader"] = result.get("reader", "structural-pure-python")
