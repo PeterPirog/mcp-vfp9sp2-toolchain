@@ -491,6 +491,71 @@ py vfp_driver.py index --project ".vfp-ai/source" --cache ".vfp-ai" --full
 
 ---
 
+## Refactoring a VFP Form (Copy-Paste Prompt)
+
+To refactor a specific form with OpenCode, paste this prompt into a new session.
+Replace `<NAZWA_FORMULARZA>` with the form name (without extension) and adjust
+the project root path if needed.
+
+```
+Wykonaj refaktoryzację kodu formularza <NAZWA_FORMULARZA>="<NAZWA FORMULARZA>" , starając zachować priorytety:
+1. szybkość działania,
+2. funkcjonalności dla użytkownika,
+3. czytelność kodu
+
+stosuj zasadę, że wszystkie pliki do formularza po refaktoryzacji będą w katalogu
+D:\Opencode projects\Logis_projekt24082026\Refactor_suggestions\<NAZWA FORMULARZA>\
+a w środku plik <NAZWA FORMULARZA> + .sct, <NAZWA FORMULARZA> + .scx, <NAZWA FORMULARZA> + .doc lub .docx
+
+Jeżeli katalog D:\Opencode projects\Logis_projekt24082026\Refactor_suggestions\<NAZWA FORMULARZA> nie istnieje to go stwórz.
+
+1. Zapisz pliki po refaktoryzacji w katalogach docelowych
+2. Nie zmieniaj plików źródłowych
+3. W pliku Word szczegółowo wyjaśnij sens refaktoryzacji, jak jest, dlaczego jest
+   to nieefektywne lub błędne, jak powinno wyglądać po refaktoryzacji, jak wykonać
+   refaktoryzację. Ta informacja ma być tutorialem dla programisty Microsoft Visual Fox Pro.
+4. Formularz po refaktoryzacji powinien wyglądać identycznie jak formularz źródłowy
+   (takie same przyciski, pola tekstowe, radio button itp.) — jeżeli zamiast statycznych
+   pól chcesz użyć listy to możesz to zrobić.
+5. Przed refaktoryzacją wykonaj audyt formularza (vfp_audit lub konwersja BIN2PRG)
+   aby poznać strukturę obiektów i kod metod.
+6. Po refaktoryzacji zweryfikuj że liczba obiektów i procedur jest identyczna
+   jak w oryginale, a zachowanie (kolorowanie, przyciski, zapis/odczyt) nie uległo zmianie.
+
+Na komputerze mam zainstalowane Microsoft Visual Fox Pro, do stworzenia
+refaktorowanego formularza możesz użyć go z komputera (VFP9 COM host).
+```
+
+**Example — refactoring `karty_pr`:**
+
+```
+Wykonaj refaktoryzację kodu formularza <NAZWA FORMULARZA>="karty_pr" , starając zachować priorytety:
+1. szybkość działania,
+2. funkcjonalności dla użytkownika,
+3. czytelność kodu
+...
+```
+
+### What the AI does with this prompt
+
+1. **Audits** the form via `vfp_audit` (or `vfp_export_file` BIN2PRG) to extract the
+   full `.sc2` text — all objects, properties, and method code.
+2. **Analyzes** the method code for repeated patterns (copy-paste blocks, manual
+   field-by-field assignments, hardcoded loops that should be `FOR` loops).
+3. **Refactors** only the method code — the visual layout, object count, and
+   properties stay identical. Typical transformations:
+   - 24× repeated `IF/ELSE` blocks → single `FOR` loop with `EVAL()` + `&macro`
+   - 125× manual `mSchowek(R,C) = mTextXX` assignments → nested `FOR` loop
+   - Hardcoded field references → dynamic name building with `STR()` + `ALLTRIM()`
+4. **Writes** the refactored form as a real binary `.scx` + `.sct` using the VFP9
+   COM host on the machine (opens the `.scx` as a table, replaces the `METHODS`
+   memo field, saves — structure unchanged).
+5. **Generates** a `.docx` tutorial explaining every change: what was inefficient,
+   why, the refactored code, step-by-step instructions for a VFP programmer.
+6. **Verifies** object count, procedure count, and behavioral equivalence.
+
+---
+
 ## Safety Guarantees
 
 | Guarantee | Mechanism |
