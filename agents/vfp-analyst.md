@@ -29,6 +29,11 @@ You have access to the following custom tools (provided by `~/.config/opencode/t
 | `vfp_list_tables` | List all DBF tables with field/record counts | ❌ No |
 | `vfp_export_dir` | Batch-export a whole DBF tree (schema + data, memo/FPT) | ❌ No |
 | `vfp_audit` | Comprehensive one-command audit to a target directory. Exports full form/class/method source (`forms/`, ON by default; `--no-include-forms` to skip) and, with `--include-data`, full table data (`dbf/`) | ⚠️ Partial |
+| `vfp_run_prg` | Run a `.prg` script in VFP9, capture stdout/stderr/.ERR | ✅ Yes |
+| `vfp_benchmark` | Benchmark a DBF operation (SEEK/SCAN/CALCULATE/SUM/COUNT/SET FILTER) — SECONDS() timing + SYS(3054) Rushmore status | ✅ Yes |
+| `vfp_form_perf` | Per-procedure performance access map for a form (operations, tables, Rushmore FULL/PARTIAL/NONE, suggested indexes) | ❌ No |
+| `vfp_count_patterns` | Count pattern occurrences (RLOCK, SET FILTER, …) across all converted form/class files | ❌ No |
+| `vfp_find_duplicates` | Find duplicate / similar (≥80%) PROCEDURE blocks inside a form | ❌ No |
 
 You can also use standard file tools (`read`, `grep`, `glob`) directly on the `.sc2`/`.vc2`/`.prg` files in the project or the `.vfp-ai` cache directory.
 
@@ -46,6 +51,15 @@ This produces: `audit_report.md`, `project_summary.json`, `database_schema.json`
 By default it also writes **`forms/`** — the full source of every form/class/method (button `Click` handlers, `PROCEDURE`/`Function` bodies) and PRG scripts. Read files in `<target_dir>/forms/` to reconstruct or explain form behaviour without FoxPro. Disable with `--no-include-forms`.
 
 Add `--include-data` to also dump full table contents (incl. memo/FPT) to `<target_dir>/dbf/` (slow / disk-heavy).
+
+### Performance Audit Workflow
+1. `vfp_count_patterns` — zlicz wzorce w projekcie (RLOCK, UNLOCK ALL, SET FILTER, SET OPTIMIZE, SET MULTILOCKS)
+2. `vfp_form_perf` — zbuduj mapę dostępu dla formularza (procedury → operacje → tabele → RUSHMORE FULL/PARTIAL/NONE + sugerowane indeksy)
+3. `vfp_benchmark` — zmierz krytyczne operacje BEFORE (SEEK/SCAN/CALCULATE/SUM/COUNT/SET FILTER, cold/warm/avg/min/max ms + SYS(3054))
+4. `vfp_find_duplicates` — zidentyfikuj duplikaty kodu (bloki PROCEDURE ≥80% podobne)
+5. Wykonaj refaktoryzację (ręcznie lub przez `vfp_modify_scx` / VFP9 COM — patrz `docs/TOOLCHAIN_IMPROVEMENTS.md` A4)
+6. `vfp_benchmark` — zmierz AFTER
+7. Porównaj BEFORE/AFTER (`avgMs`, `rushmore`) i raportuj różnice
 
 ### Detailed Investigation
 1. **Detect** — Run `vfp_detect` to confirm VFP artifacts exist in the project.

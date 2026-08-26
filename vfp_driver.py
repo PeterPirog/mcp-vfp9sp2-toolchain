@@ -643,6 +643,7 @@ def run_form_perf(form_sc2, tables_dir, out_file=None):
     op_patterns = [
         (r'\bSEEK\s+(.+?)\s+TAG\s+(\w+)', "SEEK"),
         (r'\bSCAN\s+FOR\s+(.+)', "SCAN_FOR"),
+        (r'^\s*SCAN\s*$', "SCAN"),
         (r'\bCALCULATE\s+[\w\s]+\s+(?:TO\s+\w+\s+)?FOR\s+(.+)', "CALCULATE_FOR"),
         (r'\bCOUNT\s+TO\s+\w+\s+FOR\s+(.+)', "COUNT_FOR"),
         (r'\bSUM\s+(\w+)\s+(?:TO\s+\w+\s+)?FOR\s+(.+)', "SUM_FOR"),
@@ -687,7 +688,7 @@ def run_form_perf(form_sc2, tables_dir, out_file=None):
         # Track SELECT context
         current_table = None
         for pattern, op_name in op_patterns:
-            for m in re.finditer(pattern, proc_text, re.IGNORECASE):
+            for m in re.finditer(pattern, proc_text, re.IGNORECASE | re.MULTILINE):
                 # Extract the FOR expression (last group that is an expression)
                 groups = [g for g in m.groups() if g and not g.startswith("TAG")]
                 for_expr = ""
@@ -696,8 +697,12 @@ def run_form_perf(form_sc2, tables_dir, out_file=None):
                 if op_name == "SEEK":
                     tag_name = m.group(2) if len(m.groups()) >= 2 else None
                     for_expr = m.group(1) if m.group(1) else ""
-                else:
+                elif op_name == "SUM_FOR":
+                    for_expr = (m.group(2) or "")
+                elif m.groups():
                     for_expr = m.group(1) or ""
+                else:
+                    for_expr = ""
 
                 # Try to identify table
                 table_name = current_table
@@ -928,16 +933,16 @@ def run_find_duplicates(form_sc2, min_lines=10, out_file=None):
         # Normalize whitespace
         text = re.sub(r'\s+', ' ', text).strip()
         # Replace identifiers (keep keywords)
-        text = re.sub(r'\b(?!(?:PROCEDURE|ENDPROC|LOCAL|DIMENSION|IF|ENDIF|FOR|ENDDO|'
-                      r'WHILE|DO|RETURN|ELSE|ELSEIF|CASE|ENDCASE|PUBLIC|PROTECTED|'
-                      r'PRIVATE|PARAMETERS|STORE|SET|USE|SEEK|SCAN|COUNT|SUM|CALCULATE|'
-                      r'LOCATE|REPLACE|DELETE|APPEND|BROWSE|GO|TOP|BOTTOM|SKIP|'
-                      r'EOF|BOF|FOUND|RECALL|PACK|ZAP|INDEX|TAG|EXCLUSIVE|SHARED|'
-                      r'IN|TO|FOR|ALL|REST|NEXT|PREV|FIRST|LAST|BLANK|WITH|FROM|'
-                      r'WHERE|AND|OR|NOT|IN|IS|NULL|BETWEEN|LIKE|ON|BY|ASC|DESC|'
-                      r'INTO|CURSOR|ARRAY|MEMO|CHAR|TEXT|INT|FLOAT|LOGICAL|DATE|'
-                      r'STRING|TRUE|FALSE|QUIT|DO|CASE|ENDCASE|FUNCTION|ENDFUNC)'
-                      r'[a-zA-Z_]\w*\b', 'VAR', text)
+        _keywords = (
+            "PROCEDURE|ENDPROC|LOCAL|DIMENSION|IF|ENDIF|FOR|ENDDO|WHILE|DO|RETURN|"
+            "ELSE|ELSEIF|CASE|ENDCASE|PUBLIC|PROTECTED|PRIVATE|PARAMETERS|STORE|SET|"
+            "USE|SEEK|SCAN|COUNT|SUM|CALCULATE|LOCATE|REPLACE|DELETE|APPEND|BROWSE|"
+            "GO|TOP|BOTTOM|SKIP|EOF|BOF|FOUND|RECALL|PACK|ZAP|INDEX|TAG|EXCLUSIVE|"
+            "SHARED|IN|TO|ALL|REST|NEXT|PREV|FIRST|LAST|BLANK|WITH|FROM|WHERE|AND|"
+            "OR|NOT|IS|NULL|BETWEEN|LIKE|ON|BY|ASC|DESC|INTO|CURSOR|ARRAY|MEMO|"
+            "CHAR|TEXT|INT|FLOAT|LOGICAL|DATE|STRING|TRUE|FALSE|QUIT|FUNCTION|ENDFUNC"
+        )
+        text = re.sub(r'\b(?!(?:' + _keywords + r')[\b(])\w+', 'VAR', text)
         return text
 
     # Filter blocks by min_lines

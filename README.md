@@ -173,6 +173,11 @@ An **agent** is a pre-configured persona. Place `.md` files in `~/.config/openco
 | `vfp_audit` | **Full audit**: sync + schema + data + forms + CDX/IDX indexes + table relationships + class analysis → target directory | ⚠️ Partial |
 | `vfp_analyze_cdx` | Analyze one table's index structure (.cdx/.idx): tags, sort order, type, expressions (VFP9) | ❌ No (structure) |
 | `vfp_scan_cdx` | Scan a directory tree for .cdx/.idx files and structurally parse each | ❌ No |
+| `vfp_run_prg` | Run a `.prg` script in VFP9 (`vfp9.exe /C <prg>`) and capture stdout/stderr/.ERR | ✅ Yes |
+| `vfp_benchmark` | Benchmark a DBF operation (SEEK/SCAN/CALCULATE/SUM/COUNT/SET FILTER) with SECONDS() timing + SYS(3054) Rushmore status | ✅ Yes |
+| `vfp_form_perf` | Build a per-procedure performance access map for a form: operations, tables, Rushmore FULL/PARTIAL/NONE + suggested indexes | ❌ No |
+| `vfp_count_patterns` | Count pattern occurrences (RLOCK, SET FILTER, …) across all `.sc2/.vc2/.fr2` files | ❌ No |
+| `vfp_find_duplicates` | Find duplicate / similar (≥80%) `PROCEDURE` blocks inside a form | ❌ No |
 
 ---
 
@@ -461,6 +466,33 @@ opencode vfp_audit --source <project> --out <audit_output> --no-include-forms
 - `class_analysis.json` — Class hierarchy, inheritance depth, complexity ranking
 - `forms/` — full source of every form/class/method + PRG scripts (ON by default; `--no-include-forms` to skip)
 - `dbf/` — individual `<table>_schema.json` files for each DBF; with `--include-data` (**ON by default**) also the full JSONL table contents (incl. memo), mirroring the project tree
+
+### Performance Audit Tools
+
+Tools for BEFORE/AFTER performance benchmarking and form access-map analysis (see `docs/TOOLCHAIN_IMPROVEMENTS.md`).
+
+```bash
+# 1. Count risky/slow patterns across the whole project (no VFP9 needed)
+opencode vfp_count_patterns --project . --patterns "RLOCK,UNLOCK ALL,SET FILTER,SET OPTIMIZE,SET MULTILOCKS"
+
+# 2. Build the performance access map for one form (no VFP9 needed)
+#    → per-procedure operations, table context, Rushmore FULL/PARTIAL/NONE, suggested indexes
+opencode vfp_form_perf --form .vfp-ai/source/forms/karty_pr_pp.sc2 --tables-dir Dane
+
+# 3. Benchmark critical operations BEFORE refactoring (VFP9 required, project must have Dane/)
+opencode vfp_benchmark --project . --table ksiazka_k_d --operation count_for \
+  --expression "LEFT(k_pr_sp_nr,10)='ABC'" --iterations 10
+#    operations: calculate_max, calculate_for, seek, scan, count_for, sum, set_filter_goto
+
+# 4. Find duplicate procedure blocks in a form (no VFP9 needed)
+opencode vfp_find_duplicates --form .vfp-ai/source/forms/karty_pr_pp.sc2 --min-lines 10
+
+# 5. Run any PRG in VFP9 (VFP9 required)
+opencode vfp_run_prg --prg C:\path\to\my_script.prg --workdir D:\data --timeout 120
+```
+
+**Typical BEFORE/AFTER workflow:** `vfp_form_perf` (map) → `vfp_benchmark` (BEFORE) →
+refactor → `vfp_benchmark` (AFTER) → compare `avgMs`/`rushmore`.
 
 ### Via @vfp-analyst Agent
 
