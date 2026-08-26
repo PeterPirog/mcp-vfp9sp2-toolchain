@@ -471,40 +471,59 @@ def run_benchmark(project, table, operation, expression="", field="",
     # For simpler operations, build a clean loop
     op_lines = []
     if operation in ("calculate_max", "calculate_for", "sum"):
-        op_lines.append('   CALCULATE MAX({f}) TO lnVal'.format(f=field_val))
+        if operation == "calculate_for" and expr_val:
+            op_lines.append('   CALCULATE MAX({f}) TO lnVal FOR ({e})'.format(f=field_val, e=expr_val))
+        else:
+            op_lines.append('   CALCULATE MAX({f}) TO lnVal'.format(f=field_val))
     elif operation == "seek":
         op_lines.append('   SEEK {e} TAG {t}'.format(e=expr_val, t=tag_val))
     elif operation == "scan":
-        op_lines.append('   SCAN')
+        if expr_val:
+            op_lines.append('   SCAN FOR ({e})'.format(e=expr_val))
+        else:
+            op_lines.append('   SCAN')
         op_lines.append('   DO WHILE .NOT. EOF()')
         op_lines.append('     SKIP')
         op_lines.append('   ENDDO')
     elif operation == "count_for":
-        op_lines.append('   COUNT TO lnCt')
+        if expr_val:
+            op_lines.append('   COUNT TO lnCt FOR ({e})'.format(e=expr_val))
+        else:
+            op_lines.append('   COUNT TO lnCt')
     elif operation == "set_filter_goto":
-        op_lines.append('   SET FILTER TO .T.')
+        if expr_val:
+            op_lines.append('   SET FILTER TO ({e})'.format(e=expr_val))
+        else:
+            op_lines.append('   SET FILTER TO .T.')
         op_lines.append('   GO TOP')
         op_lines.append('   SET FILTER TO')
+
+    # Rushmore check: only when an expression is provided
+    if expr_val:
+        rushmore_line = (
+            'lnRushmore = SYS(3054, 1, "{expr}")'.format(expr=expr_val)
+        )
+    else:
+        rushmore_line = '* no expression provided - Rushmore check skipped'
 
     prg_body = """\
 SET DEFAULT TO '{dane}'
 SET TALK OFF
-SET ERROR TO
-SET SYS(2023, 0)
-SET SYS(1486, 0)
+SET ERR OFF
+ON ERROR DO bench_err WITH 2
 
 LOCAL lnStart, lnEnd, lnVal, lnCt, lnResult, lnRushmore
-USE {table} IN 0 EXCLUSIVE
+lnRushmore = 0
+USE {table} IN 0 SHARED
 IF _VFP.Error <> 0
-  ? "BENCH_ERR: cannot open table {table}"
+  STRTOFILE("OPEN_ERR " + ALLTRIM(TRANSFORM(_VFP.Errno)) + " " + ALLTRIM(_VFP.Message), '{results}')
   QUIT
 ENDIF
-
-lnRushmore = 0
 {rushmore_line}
 
 LOCAL aTimes[100]
-LOCAL nIter = {iter}
+LOCAL nIter
+nIter = {iter}
 
 * Warmup
 lnStart = SECONDS()
@@ -512,39 +531,45 @@ lnStart = SECONDS()
 lnEnd = SECONDS()
 aTimes[1] = (lnEnd - lnStart) * 1000
 
+LOCAL i, lnMin, lnMax, lnSum
+lnMin = 999999
+lnMax = 0
+lnSum = 0
 FOR i = 2 TO nIter
   lnStart = SECONDS()
   {op_body}
   lnEnd = SECONDS()
   aTimes[i] = (lnEnd - lnStart) * 1000
-ENDFOR
-
-* Write results
-STORE "" TO lcOut
-lcOut = lcOut + "COLD_MS=" + TRANSFORM(aTimes[1], "1:4") + CHR(13)
-LOCAL lnMin = 999999, lnMax = 0, lnSum = 0
-FOR i = 2 TO nIter
-  IF aTimes[i] < lnMin THEN lnMin = aTimes[i]
-  IF aTimes[i] > lnMax THEN lnMax = aTimes[i]
+  IF aTimes[i] < lnMin
+    lnMin = aTimes[i]
+  ENDIF
+  IF aTimes[i] > lnMax
+    lnMax = aTimes[i]
+  ENDIF
   lnSum = lnSum + aTimes[i]
 ENDFOR
-lcOut = lcOut + "WARM_MS=" + TRANSFORM(aTimes[nIter], "1:4") + CHR(13)
-lcOut = lcOut + "AVG_MS=" + TRANSFORM(lnSum / (nIter - 1), "1:4") + CHR(13)
-lcOut = lcOut + "MIN_MS=" + TRANSFORM(lnMin, "1:4") + CHR(13)
-lcOut = lcOut + "MAX_MS=" + TRANSFORM(lnMax, "1:4") + CHR(13)
-lcOut = lcOut + "RUSHMORE=" + TRANSFORM(lnRushmore) + CHR(13)
-lcOut = lcOut + "ITERATIONS=" + TRANSFORM(nIter) + CHR(13)
 
-STORE lcOut TO (SET("DEVICE") + "|" + '{results}')
-SET DEVICE TO CONSOLE
-? "BENCH_DONE"
+* Write results (line by line, top-level STRTOFILE)
+STRTOFILE("COLD_MS=" + TRANSFORM(aTimes[1], "1:4"), '{results}')
+STRTOFILE("WARM_MS=" + TRANSFORM(aTimes[nIter], "1:4"), '{results}', 'C')
+STRTOFILE("AVG_MS=" + TRANSFORM(lnSum / (nIter - 1), "1:4"), '{results}', 'C')
+STRTOFILE("MIN_MS=" + TRANSFORM(lnMin, "1:4"), '{results}', 'C')
+STRTOFILE("MAX_MS=" + TRANSFORM(lnMax, "1:4"), '{results}', 'C')
+STRTOFILE("RUSHMORE=" + TRANSFORM(lnRushmore), '{results}', 'C')
+STRTOFILE("ITERATIONS=" + TRANSFORM(nIter), '{results}', 'C')
+STRTOFILE("BENCH_DONE", '{results}', 'C')
 
 USE
 QUIT
+
+PROCEDURE bench_err
+  STRTOFILE("RUNTIME_ERR err=" + ALLTRIM(TRANSFORM(_VFP.Errno)) + " msg=" + ALLTRIM(_VFP.Message), '{results}', 'C')
+  QUIT
+ENDPROC
 """.format(
     dane=dane_dir.replace("\\", "\\\\"),
     table=table,
-    rushmore_line='IF "{expr}" <> "" THEN lnRushmore = SYS(3054, 1, "{expr}")'.format(expr=expr_val),
+    rushmore_line=rushmore_line,
     iter=iterations,
     op_body_warmup="\n".join("  " + l for l in op_lines) or "  * warmup",
     op_body="\n".join("  " + l for l in op_lines) or "  * noop",
