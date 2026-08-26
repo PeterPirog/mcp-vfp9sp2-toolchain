@@ -24,8 +24,10 @@ minimal DBF reader is used as fallback. No hard dependency required.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vfp_common
@@ -354,6 +356,665 @@ def run_audit(source, out, skip_sync, include_data, data_formats,
         emit(False, stderr="audit failed: %s" % e)
 
 
+# ---------------------------------------------------------------------------
+# run_prg — execute a .prg file in VFP9
+# ---------------------------------------------------------------------------
+
+def _vfp9_exe():
+    """Resolve the VFP9 executable path from config.json or env.
+
+    Precedence:
+      1. VFP9_EXE environment variable
+      2. config.json -> vfp.exeEnvironmentVariable (value of that env var)
+      3. config.json -> vfp.exeDefault
+    Returns the path string (even if not found — caller must check with os.path.isfile).
+    """
+    cfg = vfp_common._load_config() or {}
+    v = cfg.get("vfp") or {}
+    env_name = v.get("exeEnvironmentVariable", "VFP9_EXE")
+    exe = os.environ.get(env_name)
+    if not exe:
+        exe = v.get("exeDefault") or os.path.join(
+            "C:\\Program Files (x86)", "Microsoft Visual FoxPro 9", "vfp9.exe")
+    return exe
+
+
+def run_run_prg(prg_path, workdir=None, timeout=120):
+    """Run a .prg file in VFP9 via command line.
+
+    Uses: vfp9.exe /C <prg_path> with cwd=workdir.
+    Captures stdout/stderr and any .ERR file content.
+    Returns JSON: {ok, rc, stdout, stderr, errFile, durationMs}
+    """
+    prg_path = os.path.abspath(prg_path)
+    if not os.path.isfile(prg_path):
+        emit(False, stderr="prg file not found: " + prg_path)
+
+    vfp9 = _vfp9_exe()
+    if not os.path.isfile(vfp9):
+        emit(False, stderr="vfp9.exe not found at: " + vfp9 +
+               " (set VFP9_EXE environment variable)")
+
+    if workdir is None:
+        workdir = os.path.dirname(prg_path)
+
+    prg_name = os.path.basename(prg_path)
+    cmd = [vfp9, "/C", prg_path]
+
+    t0 = time.time()
+    res = _run_process(cmd, timeout, cwd=workdir)
+    duration_ms = int((time.time() - t0) * 1000)
+
+    # Check for .ERR file (same name as .prg, same directory)
+    err_file = None
+    err_file_path = os.path.join(workdir, os.path.splitext(prg_name)[0] + ".ERR")
+    if os.path.isfile(err_file_path):
+        err_file = err_file_path
+        try:
+            with open(err_file_path, "r", encoding="cp1252", errors="replace") as f:
+                err_content = f.read()
+            if err_content.strip():
+                res["stderr"] = (res["stderr"] + "\n" + err_content).strip()
+        except OSError:
+            pass
+
+    emit(res["code"] == 0, rc=res["code"],
+         stdout=res["stdout"], stderr=res["stderr"],
+         data={"prg": prg_path, "workdir": workdir,
+               "errFile": err_file, "durationMs": duration_ms})
+
+
+def run_benchmark(project, table, operation, expression="", field="",
+                  tag="", iterations=10, out_file=None, timeout=300):
+    """Benchmark a DBF operation in VFP9.
+
+    Generates a temporary .prg that:
+    1. Opens the table from <project>/Dane/
+    2. Runs the operation N times with SECONDS() timing
+    3. Checks SYS(3054) for Rushmore status
+    4. Writes results to a text file
+
+    Operations: calculate_max, calculate_for, seek, scan, count_for, sum, set_filter_goto
+    """
+    project = os.path.abspath(project)
+    dane_dir = os.path.join(project, "Dane")
+    if not os.path.isdir(dane_dir):
+        emit(False, stderr="Dane directory not found: " + dane_dir)
+
+    # Generate benchmark PRG
+    bench_dir = os.path.join(project, ".vfp-ai", "benchmarks") if os.path.isdir(
+        os.path.join(project, ".vfp-ai")) else os.path.join(project, "benchmarks")
+    os.makedirs(bench_dir, exist_ok=True)
+
+    prg_path = os.path.join(bench_dir, "benchmark_temp.prg")
+    results_path = os.path.join(bench_dir, "benchmark_results.txt")
+
+    # Build the operation body
+    ops = {
+        "calculate_max": 'CALCULATE MAX({field}) TO lnResult FOR ({expr})',
+        "calculate_for": 'CALCULATE MAX({field}) TO lnResult FOR ({expr})',
+        "seek": 'SEEK {expr} TAG {tag}',
+        "scan": 'DO WHILE .F.\n  SCAN FOR ({expr})\n  DO WHILE .NOT. EOF()\n    SKIP\n  ENDDO\n  SEEK -9E999\nENDDO',
+        "count_for": 'COUNT TO lnCount FOR ({expr})',
+        "sum": 'SUM {field} TO lnResult FOR ({expr})',
+        "set_filter_goto": 'SET FILTER TO ({expr})\nGO TOP\nSET FILTER TO',
+    }
+
+    op_template = ops.get(operation, '')
+    if not op_template:
+        emit(False, stderr="unknown operation: " + operation)
+
+    field_val = field or "1"
+    expr_val = expression or ".T."
+    tag_val = tag or "TAG1"
+
+    # For simpler operations, build a clean loop
+    op_lines = []
+    if operation in ("calculate_max", "calculate_for", "sum"):
+        op_lines.append('   CALCULATE MAX({f}) TO lnVal'.format(f=field_val))
+    elif operation == "seek":
+        op_lines.append('   SEEK {e} TAG {t}'.format(e=expr_val, t=tag_val))
+    elif operation == "scan":
+        op_lines.append('   SCAN')
+        op_lines.append('   DO WHILE .NOT. EOF()')
+        op_lines.append('     SKIP')
+        op_lines.append('   ENDDO')
+    elif operation == "count_for":
+        op_lines.append('   COUNT TO lnCt')
+    elif operation == "set_filter_goto":
+        op_lines.append('   SET FILTER TO .T.')
+        op_lines.append('   GO TOP')
+        op_lines.append('   SET FILTER TO')
+
+    prg_body = """\
+SET DEFAULT TO '{dane}'
+SET TALK OFF
+SET ERROR TO
+SET SYS(2023, 0)
+SET SYS(1486, 0)
+
+LOCAL lnStart, lnEnd, lnVal, lnCt, lnResult, lnRushmore
+USE {table} IN 0 EXCLUSIVE
+IF _VFP.Error <> 0
+  ? "BENCH_ERR: cannot open table {table}"
+  QUIT
+ENDIF
+
+lnRushmore = 0
+{rushmore_line}
+
+LOCAL aTimes[100]
+LOCAL nIter = {iter}
+
+* Warmup
+lnStart = SECONDS()
+{op_body_warmup}
+lnEnd = SECONDS()
+aTimes[1] = (lnEnd - lnStart) * 1000
+
+FOR i = 2 TO nIter
+  lnStart = SECONDS()
+  {op_body}
+  lnEnd = SECONDS()
+  aTimes[i] = (lnEnd - lnStart) * 1000
+ENDFOR
+
+* Write results
+STORE "" TO lcOut
+lcOut = lcOut + "COLD_MS=" + TRANSFORM(aTimes[1], "1:4") + CHR(13)
+LOCAL lnMin = 999999, lnMax = 0, lnSum = 0
+FOR i = 2 TO nIter
+  IF aTimes[i] < lnMin THEN lnMin = aTimes[i]
+  IF aTimes[i] > lnMax THEN lnMax = aTimes[i]
+  lnSum = lnSum + aTimes[i]
+ENDFOR
+lcOut = lcOut + "WARM_MS=" + TRANSFORM(aTimes[nIter], "1:4") + CHR(13)
+lcOut = lcOut + "AVG_MS=" + TRANSFORM(lnSum / (nIter - 1), "1:4") + CHR(13)
+lcOut = lcOut + "MIN_MS=" + TRANSFORM(lnMin, "1:4") + CHR(13)
+lcOut = lcOut + "MAX_MS=" + TRANSFORM(lnMax, "1:4") + CHR(13)
+lcOut = lcOut + "RUSHMORE=" + TRANSFORM(lnRushmore) + CHR(13)
+lcOut = lcOut + "ITERATIONS=" + TRANSFORM(nIter) + CHR(13)
+
+STORE lcOut TO (SET("DEVICE") + "|" + '{results}')
+SET DEVICE TO CONSOLE
+? "BENCH_DONE"
+
+USE
+QUIT
+""".format(
+    dane=dane_dir.replace("\\", "\\\\"),
+    table=table,
+    rushmore_line='IF "{expr}" <> "" THEN lnRushmore = SYS(3054, 1, "{expr}")'.format(expr=expr_val),
+    iter=iterations,
+    op_body_warmup="\n".join("  " + l for l in op_lines) or "  * warmup",
+    op_body="\n".join("  " + l for l in op_lines) or "  * noop",
+    results=results_path.replace("\\", "\\\\"),
+)
+
+    with open(prg_path, "w", encoding="cp1252") as f:
+        f.write(prg_body)
+
+    # Run via run_prg
+    t0 = time.time()
+    vfp9 = _vfp9_exe()
+    if not os.path.isfile(vfp9):
+        emit(False, stderr="vfp9.exe not found at: " + vfp9 +
+               " (set VFP9_EXE environment variable)")
+
+    cmd = [vfp9, "/C", prg_path]
+    res = _run_process(cmd, timeout, cwd=dane_dir)
+    duration_ms = int((time.time() - t0) * 1000)
+
+    # Parse results
+    data = {
+        "operation": operation,
+        "table": table,
+        "iterations": iterations,
+        "coldMs": None,
+        "warmMs": None,
+        "avgMs": None,
+        "minMs": None,
+        "maxMs": None,
+        "rushmore": None,
+        "sys3054": None,
+        "durationMs": duration_ms,
+    }
+
+    if os.path.isfile(results_path):
+        with open(results_path, "r", encoding="cp1252", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip()
+                    try:
+                        if key == "COLD_MS":
+                            data["coldMs"] = float(val)
+                        elif key == "WARM_MS":
+                            data["warmMs"] = float(val)
+                        elif key == "AVG_MS":
+                            data["avgMs"] = float(val)
+                        elif key == "MIN_MS":
+                            data["minMs"] = float(val)
+                        elif key == "MAX_MS":
+                            data["maxMs"] = float(val)
+                        elif key == "RUSHMORE":
+                            r = int(val)
+                            data["rushmore"] = {1: "FULL", 0: "PARTIAL", -1: "NONE"}.get(r, str(r))
+                            data["sys3054"] = str(r)
+                    except ValueError:
+                        pass
+        os.remove(results_path)
+
+    emit(res["code"] == 0 and data.get("coldMs") is not None,
+         rc=res["code"],
+         stdout=res["stdout"][:500], stderr=res["stderr"][:500],
+         data=data)
+
+
+def run_form_perf(form_sc2, tables_dir, out_file=None):
+    """Build a performance access map for a form.
+
+    Parses the .sc2 file and for each PROCEDURE finds:
+    - SEEK, SCAN FOR, CALCULATE FOR, COUNT FOR, SUM FOR, LOCATE FOR
+    - SET FILTER TO, DELETE ALL FOR, REPLACE FOR
+    - Identifies the table from context (SELECT alias)
+    - Cross-references with CDX tags
+    - Marks Rushmore status: FULL/PARTIAL/NONE
+    - Suggests missing indexes
+    """
+    form_sc2 = os.path.abspath(form_sc2)
+    if not os.path.isfile(form_sc2):
+        emit(False, stderr="form file not found: " + form_sc2)
+
+    tables_dir = os.path.abspath(tables_dir)
+    if not os.path.isdir(tables_dir):
+        emit(False, stderr="tables dir not found: " + tables_dir)
+
+    with open(form_sc2, "r", encoding="cp1252", errors="replace") as f:
+        content = f.read()
+
+    # Functions that block Rushmore optimization
+    BLOCKING_FUNCS = ("LEFT", "RIGHT", "ALLTRIM", "UPPER", "LOWER",
+                      "SUBSTR", "TRANSFORM", "STR", "DTOC", "DTOF", "VAL")
+
+    # Regex patterns for data access operations
+    op_patterns = [
+        (r'\bSEEK\s+(.+?)\s+TAG\s+(\w+)', "SEEK"),
+        (r'\bSCAN\s+FOR\s+(.+)', "SCAN_FOR"),
+        (r'\bCALCULATE\s+[\w\s]+\s+(?:TO\s+\w+\s+)?FOR\s+(.+)', "CALCULATE_FOR"),
+        (r'\bCOUNT\s+TO\s+\w+\s+FOR\s+(.+)', "COUNT_FOR"),
+        (r'\bSUM\s+(\w+)\s+(?:TO\s+\w+\s+)?FOR\s+(.+)', "SUM_FOR"),
+        (r'\bLOCATE\s+FOR\s+(.+)', "LOCATE_FOR"),
+        (r'\bSET\s+FILTER\s+TO\s+(.+)', "SET_FILTER"),
+        (r'\bDELETE\s+ALL\s+FOR\s+(.+)', "DELETE_ALL_FOR"),
+        (r'\bREPLACE\s+(?:\*|[\w\s]+)\s+FOR\s+(.+)', "REPLACE_FOR"),
+    ]
+
+    # Find PROCEDURE blocks
+    proc_re = re.compile(r'\bPROCEDURE\s+(\w+)', re.IGNORECASE)
+    endproc_re = re.compile(r'\bENDPROC', re.IGNORECASE)
+
+    procedures = []
+    lines = content.splitlines()
+    i = 0
+    current_proc = None
+    proc_start = 0
+    while i < len(lines):
+        m = proc_re.match(lines[i].strip())
+        if m:
+            if current_proc:
+                procedures.append((current_proc, proc_start, i))
+            current_proc = m.group(1)
+            proc_start = i
+        elif endproc_re.match(lines[i].strip()) and current_proc:
+            procedures.append((current_proc, proc_start, i))
+            current_proc = None
+        i += 1
+    if current_proc:
+        procedures.append((current_proc, proc_start, len(lines)))
+
+    # Find all SELECT alias statements for context
+    select_re = re.compile(r'\bSELECT\s+(\w+)\s+INTO\s+CURSOR|\bSELECT\s+.*?\s+FROM\s+(\w+)', re.IGNORECASE)
+    select_alias_re = re.compile(r'\bSELECT\s+(\w+)\s+', re.IGNORECASE)
+
+    # Build access map
+    access_map = []
+    for proc_name, start_line, end_line in procedures:
+        proc_text = "\n".join(lines[start_line:end_line])
+
+        # Track SELECT context
+        current_table = None
+        for pattern, op_name in op_patterns:
+            for m in re.finditer(pattern, proc_text, re.IGNORECASE):
+                # Extract the FOR expression (last group that is an expression)
+                groups = [g for g in m.groups() if g and not g.startswith("TAG")]
+                for_expr = ""
+                tag_name = None
+
+                if op_name == "SEEK":
+                    tag_name = m.group(2) if len(m.groups()) >= 2 else None
+                    for_expr = m.group(1) if m.group(1) else ""
+                else:
+                    for_expr = m.group(1) or ""
+
+                # Try to identify table
+                table_name = current_table
+                # Check if there's a SELECT before this in the procedure
+                for sm in re.finditer(r'\bSELECT\s+(\w+)', proc_text[:m.start()], re.IGNORECASE):
+                    table_name = sm.group(1)
+
+                # Analyze Rushmore
+                rushmore = "NONE"
+                reason = "no matching tag found"
+                suggested = None
+
+                if for_expr and table_name:
+                    # Extract field names from the FOR expression
+                    fields = re.findall(r'\b([a-z_]\w{1,30})\b', for_expr.lower())
+                    fields = [f for f in fields if f not in
+                              ("and", "or", "not", "in", "is", "null", "between",
+                               "like", "the", "to", "for", "all", "true", "false")]
+
+                    # Check if expression uses blocking functions
+                    upper_expr = for_expr.upper()
+                    has_blocking = any(" ".join(f + "(") in upper_expr or
+                                      f + "(" in upper_expr.replace(" ", "")
+                                      for f in BLOCKING_FUNCS)
+
+                    # Try to load CDX for this table
+                    cdx_file = os.path.join(tables_dir, table_name + ".CDX")
+                    if os.path.isfile(cdx_file):
+                        try:
+                            import vfp_cdx
+                            cdx_info = vfp_cdx.parse_cdx(cdx_file)
+                            if cdx_info.get("ok"):
+                                tags = cdx_info.get("tags", [])
+                                tag_names = [t["tag"].upper() for t in tags]
+                                if tag_names:
+                                    if not has_blocking:
+                                        rushmore = "FULL"
+                                        reason = "exact field match with tag"
+                                    else:
+                                        rushmore = "PARTIAL"
+                                        reason = "expression uses function that blocks Rushmore"
+                                        suggested = "INDEX ON %s TAG %s" % (
+                                            for_expr, table_name + "_" + op_name.lower())
+                                else:
+                                    rushmore = "NONE"
+                                    reason = "no tags found in CDX"
+                                    suggested = "INDEX ON %s TAG %s" % (
+                                        fields[0] if fields else for_expr, table_name + "_idx")
+                            else:
+                                rushmore = "NONE"
+                                reason = "CDX parse failed"
+                        except Exception:
+                            pass
+
+                entry = {
+                    "procedure": proc_name,
+                    "operation": op_name,
+                    "expression": for_expr[:200],
+                    "table": table_name,
+                    "tag": tag_name,
+                    "rushmore": rushmore,
+                    "reason": reason,
+                    "line": start_line + 1,
+                }
+                if suggested:
+                    entry["suggestedIndex"] = suggested
+                access_map.append(entry)
+
+    result = {
+        "form": os.path.splitext(os.path.basename(form_sc2))[0],
+        "totalOperations": len(access_map),
+        "accessMap": access_map,
+    }
+
+    if out_file:
+        out_file = os.path.abspath(out_file)
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+        result["outputFile"] = out_file
+
+    emit(True, rc=0, data=result)
+
+
+def run_count_patterns(project, patterns_str, out_file=None):
+    """Count pattern occurrences across all .sc2 files in project cache.
+
+    Patterns: comma-separated regex patterns.
+    Scans .vfp-ai cache or Audit_output/forms for .sc2 files.
+    Returns per-form counts + totals + top forms.
+    """
+    project = os.path.abspath(project)
+    patterns = [p.strip() for p in patterns_str.split(",") if p.strip()]
+    if not patterns:
+        emit(False, stderr="no patterns specified")
+
+    # Find .sc2 files
+    sc2_files = []
+    cache_dirs = [
+        os.path.join(project, ".vfp-ai"),
+        os.path.join(project, ".vfp-ai", "source"),
+        os.path.join(project, "Audit_output", "forms"),
+        os.path.join(project, "audit_report", "forms"),
+    ]
+
+    for cdir in cache_dirs:
+        if not os.path.isdir(cdir):
+            continue
+        for root, dirs, files in os.walk(cdir):
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
+            for fn in files:
+                if fn.lower().endswith((".sc2", ".vc2", ".fr2")):
+                    sc2_files.append(os.path.join(root, fn))
+
+    if not sc2_files:
+        # Fallback: scan project for .sc2 directly
+        excl = vfp_common.default_excludes()
+        for root, dirs, files in os.walk(project):
+            dirs[:] = [d for d in dirs if not d.startswith(".") and d.lower() not in excl]
+            for fn in files:
+                if fn.lower().endswith((".sc2", ".vc2", ".fr2")):
+                    sc2_files.append(os.path.join(root, fn))
+
+    # Compile patterns
+    compiled = []
+    for pat in patterns:
+        try:
+            compiled.append((pat, re.compile(pat, re.IGNORECASE)))
+        except re.error:
+            compiled.append((pat, re.compile(re.escape(pat), re.IGNORECASE)))
+
+    # Count per file
+    per_form = {}
+    for fp in sc2_files:
+        form_name = os.path.splitext(os.path.basename(fp))[0]
+        try:
+            with open(fp, "r", encoding="cp1252", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        counts = {}
+        for pat, rx in compiled:
+            n = len(rx.findall(text))
+            if n > 0:
+                counts[pat] = n
+        if counts:
+            per_form[form_name] = counts
+
+    # Aggregate
+    pattern_results = {}
+    for pat, _ in compiled:
+        total = sum(fc.get(pat, 0) for fc in per_form.values())
+        top_forms = sorted(
+            [(fn, fc[pat]) for fn, fc in per_form.items() if pat in fc],
+            key=lambda x: -x[1])[:5]
+        pattern_results[pat] = {
+            "total": total,
+            "topForms": [{"form": fn, "count": cnt} for fn, cnt in top_forms],
+        }
+
+    result = {
+        "project": project,
+        "totalForms": len(sc2_files),
+        "formsWithMatches": len(per_form),
+        "patterns": pattern_results,
+    }
+
+    if out_file:
+        out_file = os.path.abspath(out_file)
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+        result["outputFile"] = out_file
+
+    emit(True, rc=0, data=result)
+
+
+def run_find_duplicates(form_sc2, min_lines=10, out_file=None):
+    """Find duplicate code blocks in a form.
+
+    Parses PROCEDURE...ENDPROC blocks, normalizes (removes comments/whitespace),
+    hashes them, and finds blocks with identical or similar content.
+    """
+    import hashlib
+    import difflib
+
+    form_sc2 = os.path.abspath(form_sc2)
+    if not os.path.isfile(form_sc2):
+        emit(False, stderr="form file not found: " + form_sc2)
+
+    with open(form_sc2, "r", encoding="cp1252", errors="replace") as f:
+        content = f.read()
+
+    lines = content.splitlines()
+
+    # Find PROCEDURE blocks
+    proc_re = re.compile(r'\bPROCEDURE\s+(\w+)', re.IGNORECASE)
+    endproc_re = re.compile(r'\bENDPROC', re.IGNORECASE)
+
+    blocks = []
+    i = 0
+    current_name = None
+    current_start = 0
+    while i < len(lines):
+        m = proc_re.match(lines[i].strip())
+        if m:
+            current_name = m.group(1)
+            current_start = i
+        elif endproc_re.match(lines[i].strip()) and current_name:
+            blocks.append({
+                "name": current_name,
+                "start": current_start + 1,
+                "end": i + 1,
+                "lines": lines[current_start:i],
+            })
+            current_name = None
+        i += 1
+
+    # Normalize and hash blocks
+    def normalize(text):
+        """Remove comments, normalize whitespace, replace identifiers with VAR."""
+        # Remove VFP comments (*, //, &&, NOTE, REM)
+        text = re.sub(r'^\s*\*.*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'//.*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'&&.*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\bNOTE\b.*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\bREM\b.*$', '', text, flags=re.MULTILINE)
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        # Replace identifiers (keep keywords)
+        text = re.sub(r'\b(?!(?:PROCEDURE|ENDPROC|LOCAL|DIMENSION|IF|ENDIF|FOR|ENDDO|'
+                      r'WHILE|DO|RETURN|ELSE|ELSEIF|CASE|ENDCASE|PUBLIC|PROTECTED|'
+                      r'PRIVATE|PARAMETERS|STORE|SET|USE|SEEK|SCAN|COUNT|SUM|CALCULATE|'
+                      r'LOCATE|REPLACE|DELETE|APPEND|BROWSE|GO|TOP|BOTTOM|SKIP|'
+                      r'EOF|BOF|FOUND|RECALL|PACK|ZAP|INDEX|TAG|EXCLUSIVE|SHARED|'
+                      r'IN|TO|FOR|ALL|REST|NEXT|PREV|FIRST|LAST|BLANK|WITH|FROM|'
+                      r'WHERE|AND|OR|NOT|IN|IS|NULL|BETWEEN|LIKE|ON|BY|ASC|DESC|'
+                      r'INTO|CURSOR|ARRAY|MEMO|CHAR|TEXT|INT|FLOAT|LOGICAL|DATE|'
+                      r'STRING|TRUE|FALSE|QUIT|DO|CASE|ENDCASE|FUNCTION|ENDFUNC)'
+                      r'[a-zA-Z_]\w*\b', 'VAR', text)
+        return text
+
+    # Filter blocks by min_lines
+    valid_blocks = [b for b in blocks if (b["end"] - b["start"] + 1) >= min_lines]
+
+    # Hash
+    for b in valid_blocks:
+        norm = normalize("\n".join(b["lines"]))
+        b["hash"] = hashlib.sha256(norm.encode("utf-8")).hexdigest()
+        b["normalized"] = norm
+
+    # Find duplicates by hash (100% similarity)
+    hash_groups = {}
+    for b in valid_blocks:
+        hash_groups.setdefault(b["hash"], []).append(b)
+
+    duplicates = []
+    for h, group in hash_groups.items():
+        if len(group) < 2:
+            continue
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                duplicates.append({
+                    "block1": "%s (lines %d-%d)" % (group[i]["name"], group[i]["start"], group[i]["end"]),
+                    "block2": "%s (lines %d-%d)" % (group[j]["name"], group[j]["start"], group[j]["end"]),
+                    "similarity": 100,
+                    "lines": group[i]["end"] - group[i]["start"] + 1,
+                    "type": "identical",
+                })
+
+    # Find similar blocks (80%+)
+    if len(valid_blocks) > 1:
+        checked = set()
+        for i in range(len(valid_blocks)):
+            for j in range(i + 1, len(valid_blocks)):
+                if valid_blocks[i]["hash"] == valid_blocks[j]["hash"]:
+                    continue
+                pair_key = (i, j)
+                if pair_key in checked:
+                    continue
+                checked.add(pair_key)
+                a = valid_blocks[i]["normalized"]
+                b_norm = valid_blocks[j]["normalized"]
+                if len(a) < 50 or len(b_norm) < 50:
+                    continue
+                ratio = difflib.SequenceMatcher(None, a, b_norm).ratio()
+                if ratio >= 0.80:
+                    duplicates.append({
+                        "block1": "%s (lines %d-%d)" % (valid_blocks[i]["name"],
+                                                         valid_blocks[i]["start"],
+                                                         valid_blocks[i]["end"]),
+                        "block2": "%s (lines %d-%d)" % (valid_blocks[j]["name"],
+                                                         valid_blocks[j]["start"],
+                                                         valid_blocks[j]["end"]),
+                        "similarity": round(ratio * 100, 1),
+                        "lines": valid_blocks[i]["end"] - valid_blocks[i]["start"] + 1,
+                        "type": "similar",
+                    })
+
+    result = {
+        "form": os.path.splitext(os.path.basename(form_sc2))[0],
+        "totalProcedures": len(blocks),
+        "analyzedBlocks": len(valid_blocks),
+        "duplicates": duplicates,
+        "duplicateCount": len(duplicates),
+    }
+
+    if out_file:
+        out_file = os.path.abspath(out_file)
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+        result["outputFile"] = out_file
+
+    emit(True, rc=0, data=result)
+
+
 def main():
     """argparse entrypoint dispatching subcommands."""
     ap = argparse.ArgumentParser(prog="vfp_driver")
@@ -413,6 +1074,40 @@ def main():
     pdt.add_argument("--deleted", default="include", choices=["skip", "separate", "include"],
                      help="Deleted record handling")
 
+    prp = sub.add_parser("run_prg", help="Run a .prg script in VFP9")
+    prp.add_argument("--prg", required=True, help="Path to .prg file")
+    prp.add_argument("--workdir", default=None, help="Working directory (default: prg dir)")
+    prp.add_argument("--timeout", type=int, default=120, help="Timeout in seconds")
+
+    pb = sub.add_parser("benchmark", help="Benchmark DBF operations in VFP9")
+    pb.add_argument("--project", required=True, help="VFP project root (contains Dane/)")
+    pb.add_argument("--table", required=True, help="Table alias to benchmark")
+    pb.add_argument("--operation", required=True,
+                    choices=["calculate_max", "calculate_for", "seek", "scan",
+                             "count_for", "sum", "set_filter_goto"])
+    pb.add_argument("--expression", default="", help="FOR expression or SEEK key")
+    pb.add_argument("--field", default="", help="Field name for CALCULATE/SUM")
+    pb.add_argument("--tag", default="", help="TAG name for SEEK")
+    pb.add_argument("--iterations", type=int, default=10)
+    pb.add_argument("--out", default=None, help="Output file for results")
+    pb.add_argument("--timeout", type=int, default=300)
+
+    pfp = sub.add_parser("form_perf", help="Build performance access map for a form")
+    pfp.add_argument("--form", required=True, help="Path to .sc2 file")
+    pfp.add_argument("--tables-dir", required=True, help="Directory with .dbf/.cdx files")
+    pfp.add_argument("--out", default=None, help="Output JSON file")
+
+    pcp = sub.add_parser("count_patterns", help="Count pattern occurrences across forms")
+    pcp.add_argument("--project", required=True, help="Project root (with .vfp-ai cache)")
+    pcp.add_argument("--patterns", required=True,
+                     help="Comma-separated patterns: RLOCK,UNLOCK ALL,SET OPTIMIZE,...")
+    pcp.add_argument("--out", default=None, help="Output JSON file")
+
+    pfd = sub.add_parser("find_duplicates", help="Find duplicate code blocks in a form")
+    pfd.add_argument("--form", required=True, help="Path to .sc2 file")
+    pfd.add_argument("--min-lines", type=int, default=10, help="Minimum block size")
+    pfd.add_argument("--out", default=None, help="Output JSON file")
+
     pa = sub.add_parser("audit", help="Run comprehensive audit: sync + DBF schema + table relationships + class analysis")
     pa.add_argument("--source", required=True, help="VFP project root directory")
     pa.add_argument("--out", required=True, help="Output directory for audit report")
@@ -452,6 +1147,18 @@ def main():
         run_audit(a.source, a.out, a.skip_sync, a.include_data, a.data_formats,
                   a.max_tables, a.dbf_exclude, a.no_cache_scan,
                   include_forms=a.include_forms)
+    elif a.cmd == "run_prg":
+        run_run_prg(a.prg, a.workdir, a.timeout)
+    elif a.cmd == "benchmark":
+        run_benchmark(a.project, a.table, a.operation,
+                      expression=a.expression, field=a.field, tag=a.tag,
+                      iterations=a.iterations, out_file=a.out, timeout=a.timeout)
+    elif a.cmd == "form_perf":
+        run_form_perf(a.form, a.tables_dir, a.out)
+    elif a.cmd == "count_patterns":
+        run_count_patterns(a.project, a.patterns, a.out)
+    elif a.cmd == "find_duplicates":
+        run_find_duplicates(a.form, a.min_lines, a.out)
 
 
 if __name__ == "__main__":
