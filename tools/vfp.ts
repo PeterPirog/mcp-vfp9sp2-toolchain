@@ -658,6 +658,124 @@ export const vfp_analyze_cdx = tool({
   },
 })
 
+export const vfp_run_prg = tool({
+  description:
+    "Run a .prg script in VFP9 via command line (vfp9.exe /C <prg>). Captures stdout/stderr and any .ERR file content. Requires VFP9 to be installed (VFP9_EXE env or config). Returns {ok, rc, stdout, stderr, data:{errFile, durationMs}}.",
+  args: {
+    prg: tool.schema.string().describe("Path to .prg file to run."),
+    workdir: tool.schema.string().optional().describe("Working directory for the run (default: the prg's own directory)."),
+    timeout: tool.schema.number().optional().describe("Timeout in seconds (default 120)."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "run_prg", "--prg", args.prg]
+    if (args.workdir) cmd.push("--workdir", args.workdir)
+    if (args.timeout) cmd.push("--timeout", String(args.timeout))
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    try {
+      return JSON.parse(out.trim())
+    } catch {
+      return { ok: rc === 0, stdout: out, stderr: err }
+    }
+  },
+})
+
+export const vfp_benchmark = tool({
+  description:
+    "Benchmark a DBF operation in VFP9: generates a timing .prg (SECONDS() per iteration + SYS(3054) Rushmore status), runs it, and returns cold/warm/avg/min/max ms. Operations: calculate_max, calculate_for, seek, scan, count_for, sum, set_filter_goto. Requires VFP9 and a project with a Dane/ directory.",
+  args: {
+    project: tool.schema.string().describe("VFP project root (contains Dane/)."),
+    table: tool.schema.string().describe("Table alias to benchmark."),
+    operation: tool.schema.string().describe("Operation to benchmark: calculate_max, calculate_for, seek, scan, count_for, sum, set_filter_goto."),
+    expression: tool.schema.string().optional().describe("FOR expression or SEEK key."),
+    field: tool.schema.string().optional().describe("Field name for CALCULATE/SUM."),
+    tag: tool.schema.string().optional().describe("TAG name for SEEK."),
+    iterations: tool.schema.number().optional().describe("Number of warm iterations (default 10)."),
+    timeout: tool.schema.number().optional().describe("Timeout in seconds (default 300)."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "benchmark", "--project", args.project,
+      "--table", args.table, "--operation", args.operation]
+    if (args.expression) cmd.push("--expression", args.expression)
+    if (args.field) cmd.push("--field", args.field)
+    if (args.tag) cmd.push("--tag", args.tag)
+    if (args.iterations) cmd.push("--iterations", String(args.iterations))
+    if (args.timeout) cmd.push("--timeout", String(args.timeout))
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    try {
+      return JSON.parse(out.trim())
+    } catch {
+      return { ok: rc === 0, stdout: out, stderr: err }
+    }
+  },
+})
+
+export const vfp_form_perf = tool({
+  description:
+    "Build a performance access map for a form: parses a .sc2 file, finds SEEK/SCAN FOR/CALCULATE FOR/COUNT FOR/SUM FOR/LOCATE FOR/SET FILTER/DELETE ALL FOR/REPLACE FOR per procedure, cross-references CDX tags in tables-dir, and marks Rushmore status FULL/PARTIAL/NONE with suggested indexes. NO VFP9 required (structural CDX parsing).",
+  args: {
+    form: tool.schema.string().describe("Path to .sc2 file to analyze."),
+    tablesDir: tool.schema.string().describe("Directory with .dbf/.cdx files for tag cross-reference."),
+    out: tool.schema.string().optional().describe("Optional path to write the result JSON."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "form_perf", "--form", args.form, "--tables-dir", args.tablesDir]
+    if (args.out) cmd.push("--out", args.out)
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `form_perf exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
+export const vfp_count_patterns = tool({
+  description:
+    "Count pattern occurrences across all .sc2/.vc2/.fr2 files in the project (.vfp-ai cache or forms export). Returns per-form counts, totals per pattern, and top-5 forms per pattern. NO VFP9 required.",
+  args: {
+    project: tool.schema.string().describe("Project root (with .vfp-ai cache or audit forms dir)."),
+    patterns: tool.schema.string().describe("Comma-separated patterns, e.g. 'RLOCK,UNLOCK ALL,SET OPTIMIZE,SET FILTER'."),
+    out: tool.schema.string().optional().describe("Optional path to write the result JSON."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "count_patterns", "--project", args.project, "--patterns", args.patterns]
+    if (args.out) cmd.push("--out", args.out)
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `count_patterns exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
+export const vfp_find_duplicates = tool({
+  description:
+    "Find duplicate code blocks in a form .sc2 file: parses PROCEDURE...ENDPROC blocks, normalizes (comments/whitespace/identifiers), and reports identical (100%) and similar (>=80% via SequenceMatcher) block pairs with line ranges. NO VFP9 required.",
+  args: {
+    form: tool.schema.string().describe("Path to .sc2 file to scan."),
+    minLines: tool.schema.number().optional().describe("Minimum block size in lines (default 10)."),
+    out: tool.schema.string().optional().describe("Optional path to write the result JSON."),
+  },
+  async execute(args, _context) {
+    const cmd = [py, DRIVER, "find_duplicates", "--form", args.form]
+    if (args.minLines) cmd.push("--min-lines", String(args.minLines))
+    if (args.out) cmd.push("--out", args.out)
+    const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" })
+    const out = await new Response(p.stdout).text()
+    const err = await new Response(p.stderr).text()
+    const rc = await p.exited
+    if (rc !== 0) throw new Error(err || `find_duplicates exit ${rc}`)
+    return JSON.parse(out.trim())
+  },
+})
+
 export const vfp_scan_cdx = tool({
   description:
     "Scan a directory tree for .cdx/.idx index files and structurally parse each one (tag names, sort order, type). Works WITHOUT VFP9. Returns a list of parsed index files.",
