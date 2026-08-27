@@ -1,59 +1,267 @@
-# VFP Integration Toolchain for OpenCode
+# VFP Integration Toolchain
 
-Offline-first integration between OpenCode AI agents and **Microsoft Visual FoxPro 9.0 Service Pack 2** projects.
+Offline-first tooling for analysis, optimization and future controlled refactoring of **Microsoft Visual FoxPro 9.0 Service Pack 2** applications.
 
-> **Target platform:** Microsoft Visual FoxPro 9.0 SP2 (`microsoft.visual-foxpro.9.0.sp2`).
->
-> The toolchain is designed specifically around VFP9 SP2 language, file formats, SQL engine behavior, forms/classes, DBF/FPT/CDX/IDX data access, DBC metadata, Rushmore, reporting, project/build/runtime semantics and known VFP9 SP2 defects. Older FoxPro/VFP versions may be analyzed as legacy input, but they are not the generation/refactoring target unless compatibility behavior is explicitly modeled.
+Target dialect:
 
-The current `main` branch is primarily a **strict read-only audit and reverse-engineering plane**. The repository also contains the normative knowledge and architecture required for future controlled refactoring/build support, but those write capabilities must not be confused with what is already implemented.
+```text
+microsoft.visual-foxpro.9.0.sp2
+```
 
-## VFP9 SP2 requirement
+Target deployment platform is Windows. The long-term architecture is a **local MCP server** running on a Windows machine that may have Microsoft Visual FoxPro 9 SP2 installed. MCP is **not implemented yet**; current interfaces are CLI/OpenCode adapters.
 
-For VFP binary conversion and runtime/compiler validation, a locally installed Microsoft Visual FoxPro 9.0 SP2 environment is required.
+## Core architectural rule
 
-The toolchain must identify the exact build rather than merely finding `vfp9.exe`.
+Visual FoxPro must **not** be required for ordinary read-only inspection.
 
-Important baselines in the local offline knowledge base are:
+The target capability split is:
+
+```text
+PURE READ                     no VFP required
+VFP-enhanced authoritative    VFP9 SP2 required
+workspace write/refactor      VFP9 SP2 required
+compile/build/REINDEX          VFP9 SP2 required
+```
+
+This allows the same future MCP server to provide useful analysis even when VFP is unavailable, while using the installed VFP9 SP2 runtime/compiler as the authoritative backend whenever exact VFP behavior matters.
+
+## VFP9 SP2 role
+
+VFP9 SP2 is the authoritative backend for operations such as:
+
+```text
+FoxBin2Prg canonical BIN2PRG conversion
+ALANGUAGE()/AMEMBERS() runtime inventory
+runtime CDX/DBC introspection
+SYS(3054) Rushmore profiling
+syntax/compiler validation
+COMPILE / COMPILE FORM
+BUILD PROJECT / APP / EXE / DLL
+REINDEX copied/anonymized tables
+controlled form/class/database workspace operations
+```
+
+Important known baselines stored in the offline knowledge base:
 
 ```text
 9.0.0.5815  Visual FoxPro 9 Service Pack 2
-9.0.0.7423  VFP9 SP2 + Microsoft post-SP2 Hotfix baseline
+9.0.0.7423  SP2 + Microsoft post-SP2 Hotfix baseline
 ```
 
-A patched SP2 installation must not be rejected simply because its build is later than 5815.
+The IDE and deployed runtime DLLs must not be assumed to have identical builds.
 
-Where deployed runtime DLLs are audited, their versions must also be recorded; the developer IDE and deployed VFP runtime are not assumed to have identical patch levels.
+## PURE READ — must work without VFP
 
-## Offline-first design
+The architecture requires these classes of operation to remain available without installing Visual FoxPro:
 
-The runtime toolchain is intended to work without Internet access.
+- project/artifact detection,
+- file manifests and SHA256,
+- PRG/H/MPR text reading and search,
+- DBF/FPT schema and record export,
+- direct read-only inspection of VFP table-based designer artifacts,
+- static dependency/symbol analysis,
+- code-page/encoding analysis,
+- local knowledge and known-issue lookup,
+- structural CDX/IDX analysis with explicit heuristic confidence.
 
-Operational VFP knowledge lives under `language/` and includes:
+Artifact families that the pure reader should understand include:
 
-- VFP9 SP2 language and semantic rules,
-- form/class and SCX/SCT knowledge,
-- DBF/FPT/CDX/IDX and Rushmore rules,
-- DBC/views/CursorAdapter/SPT knowledge,
-- application lifecycle, project/build/runtime semantics,
-- menus/reports/labels and external integrations,
-- system limits,
-- known VFP9/SP2 defects and workarounds,
-- patch-level guidance and offline diagnostic policy.
+```text
+DBF + optional FPT/CDX/IDX
+SCX + SCT
+VCX + VCT
+FRX + FRT
+LBX + LBT
+MNX + MNT
+PJX + PJT
+DBC + DCT + DCX
+PRG / H / MPR
+```
 
-Internet URLs inside the knowledge base are provenance for maintainers, not runtime dependencies.
+Pure parsing must not fabricate source from binary fields. Every result should indicate provenance such as:
 
-If an observed defect is not in the local known-issues catalog and cannot be established from the local VFP runtime/project evidence, the agent must return `KNOWN_ISSUE_NOT_FOUND` rather than inventing a workaround.
+```text
+PURE_PARSER
+FOXBIN2PRG
+VFP9_RUNTIME
+HEURISTIC_CDX
+```
 
-## Knowledge contract
+When VFP9 is available, enhanced results can verify/supersede pure-parser results without changing the public result schema.
 
-The complete knowledge layer is defined by the files in `language/`, especially:
+## Future MCP architecture
+
+MCP is intended to be a thin transport adapter over a transport-neutral Python service layer.
+
+```text
+OpenCode / CLI today
+        |
+        v
+transport-neutral Python service
+        |
+        +-- pure Python read/data backend
+        +-- VFP9 runtime backend
+        +-- dbfbridge data backend
+        +-- anonymization/privacy backend
+        +-- knowledge/performance/refactor services
+        |
+        v
+future MCP adapter
+```
+
+Domain logic must not be duplicated inside future MCP handlers.
+
+See:
+
+- `docs/MCP_TARGET_ARCHITECTURE.md`
+- `docs/mcp_capability_model.json`
+
+## Capability classes
+
+Every future operation should declare its requirements:
+
+```text
+PURE_READ
+PURE_WRITE_COPY
+VFP_READ_ENHANCED
+VFP_WRITE_WORKSPACE
+VFP_BUILD_VALIDATE
+PRIVACY_SENSITIVE
+```
+
+A future `vfp_capabilities` operation should let clients discover which modes are available on the current host before invoking a tool.
+
+## Data layer — dbfbridge
+
+The repository uses **dbfbridge** as the preferred DBF/FPT data backend:
+
+`https://github.com/PeterPirog/dbfbridge`
+
+The current toolchain already vendors a pinned dbfbridge snapshot under `tools/dbfbridge/` for offline reproducibility.
+
+Its Python API provides data-oriented operations such as:
+
+```text
+export_dbf()
+reconstruct_dbf()
+verify_conversion()
+check_conversion_quality()
+```
+
+Important capabilities include:
+
+- VFP-independent DBF/FPT access,
+- JSONL/JSON/CSV/XLSX export,
+- schema metadata,
+- memo handling,
+- reconstruction,
+- checksum/round-trip validation,
+- Polish cp1250/cp852/Mazovia handling.
+
+## Data anonymization
+
+The target architecture integrates:
+
+`https://github.com/PeterPirog/DBF_Anonymizer`
+
+through its Python API rather than duplicating anonymization logic.
+
+The upstream public API includes:
+
+```text
+anonymize_directory()
+make_dbf_recovery()
+self_test()
+```
+
+Planned toolchain operations:
+
+```text
+vfp_anonymize
+vfp_anonymize_verify
+vfp_anonymize_self_test
+vfp_recover_data
+```
+
+### When VFP is not required
+
+For DBF/FPT data without structural CDX requirements, anonymization can follow:
+
+```text
+DBF/FPT
+ -> dbfbridge
+ -> DBF_Anonymizer
+ -> dbfbridge reconstruction
+ -> verification
+```
+
+without Visual FoxPro.
+
+### When VFP is required
+
+If anonymized tables use structural CDX, changing indexed values makes the old index contents stale. A valid output therefore requires VFP9 SP2 to rebuild/verify indexes in an isolated copy:
+
+```text
+anonymized DBF/FPT
+ -> VFP9 REINDEX
+ -> runtime tag verification
+ -> publish only after PASS
+```
+
+The toolchain must never present a copied stale CDX as valid for changed DBF data.
+
+The reversible `dictionary.sqlite3` is a **sensitive secret artifact**. It must not be included in normal audits, logs, model prompts or Git commits. Recovery should be separately disableable in a future server deployment.
+
+See `docs/ANONYMIZATION_INTEGRATION.md`.
+
+## FoxBin2Prg
+
+The VFP-enhanced backend uses FoxBin2Prg:
+
+`https://github.com/fdbozzo/foxbin2prg`
+
+FoxBin2Prg provides canonical text representations of VFP binary designer/project/database artifacts such as:
+
+```text
+PJX -> PJ2
+SCX -> SC2
+VCX -> VC2
+FRX -> FR2
+LBX -> LB2
+MNX -> MN2
+DBC -> DC2
+DBF -> DB2
+```
+
+For **source analysis**, this toolchain uses BIN2PRG only. Source files remain immutable.
+
+FoxBin2Prg requires the VFP environment; therefore it is an enhanced canonical backend, not a dependency for future PURE READ availability.
+
+## Offline VFP9 SP2 knowledge base
+
+Runtime operation is intended to work without Internet access.
+
+The repository stores normative VFP9 SP2 knowledge under `language/`, including:
+
+- language and compatibility rules,
+- forms/classes/DataEnvironment,
+- DBF/FPT/CDX/IDX/Rushmore,
+- DBC/views/CursorAdapter/SPT,
+- build/runtime/deployment,
+- menus/reports/labels,
+- COM/OLE/ActiveX/DLL/FLL,
+- known VFP9 SP2 defects and patch levels,
+- performance optimization rules,
+- capability/completeness gates.
+
+Important files include:
 
 ```text
 language/README.md
 language/VFP9SP2_REQUIRED_KNOWLEDGE.md
 language/VFP9SP2_COMPLETE_APPLICATION_KNOWLEDGE.md
 language/VFP9SP2_OFFLINE_KNOWLEDGE_AND_ERRATA.md
+language/VFP9SP2_PERFORMANCE_OPTIMIZATION.md
 language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md
 language/VFP9SP2_CAPABILITY_MATRIX.md
 language/vfp9sp2_known_issues.json
@@ -67,244 +275,63 @@ language/vfp9sp2_language.schema.json
 language/extract_vfp9sp2_runtime_inventory.prg
 ```
 
-### Important knowledge-status distinction
+## Full VFP9 SP2 Help goal
 
-The repository already has broad **domain knowledge**, but it does not yet contain a fully exhaustive offline catalog of every VFP9 SP2 command/function/PEM signature and syntax variant.
+The project should contain a complete offline searchable VFP9 SP2 Help-derived corpus rather than requiring `vfphelp.com` at runtime.
 
-Current knowledge-gate state:
+The preferred upstream source is the VFPX HelpFile project, whose README states that Microsoft transferred the VFP9 SP2 Help source/change rights to the VFP community under Creative Commons licensing:
 
-```text
-DOMAIN_KNOWLEDGE               READY
-OFFLINE_ERRATA                 READY
-RUNTIME_INTROSPECTION_SPEC     READY
-EXACT_OFFLINE_LANGUAGE_CATALOG INCOMPLETE
-AUTONOMOUS_CODE_GENERATION     BLOCKED_BY_KNOWLEDGE_GATE
-```
+`https://github.com/VFPX/HelpFile`
 
-See `language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md`.
+The architecture should use a **pinned snapshot or normalized generated catalog**, with upstream commit/license/SHA256 provenance. Do not scrape the live web site during requests.
 
-The installed VFP9 SP2 compiler/runtime remains the final syntax authority for changed/generated code.
+The exact offline Help/catalog gate is not closed yet; see `language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md`.
 
-## Current architecture
+## Performance optimization
 
-### Analyze plane — implemented/current
+Optimization must be evidence-based rather than stylistic.
 
-The source project is treated as immutable.
-
-Core rules:
+The local performance contract requires analysis of, among other things:
 
 ```text
-No source modification
-No PRG2BIN against source
-BIN2PRG only for source designer artifacts
-Audit/export output goes outside source or to .vfp-ai
-Source integrity must be verifiable
-```
-
-Current capabilities include, depending on the installed environment:
-
-- detection of VFP project artifacts,
-- FoxBin2Prg BIN2PRG export of VFP designer files,
-- SC2/VC2 indexing and symbol/reference search,
-- DBF/FPT schema and data export,
-- CDX/IDX structural analysis with confidence limitations,
-- project-level audit artifacts,
-- class/form/source reverse engineering.
-
-### Controlled refactor/build plane — architecture/roadmap
-
-The intended write path is:
-
-```text
-SOURCE (immutable)
-   |
-   v
-BIN2PRG / audit / semantic model
-   |
-   v
-RefactorPlan with hashes/preconditions
-   |
-   v
-isolated workspace copy
-   |
-   v
-VFP9 SP2 applies changes
-   |
-   v
-COMPILE / COMPILE FORM / BUILD as appropriate
-   |
-   v
-final BIN2PRG round-trip
-   |
-   v
-source/final structural comparison
-   |
-   v
-regression + performance validation
-   |
-   v
-PASS -> final artifact
-```
-
-Do not assume these write/refactor operations are already fully implemented merely because the knowledge contract describes them.
-
-## Capability truthfulness
-
-`language/VFP9SP2_CAPABILITY_MATRIX.md` is the authoritative distinction between:
-
-1. knowledge available in the repository, and
-2. executable tooling implemented on `main`.
-
-A domain must not be reported `COMPLETE` if it is only partially parsed, heuristic, unknown or roadmap-only.
-
-In particular, current `main` must not claim that audit output alone is guaranteed to reconstruct every arbitrary VFP9 SP2 application. A complete application can depend on DBC semantics, local/remote views, CursorAdapter, external COM/ActiveX/DLL/FLL dependencies, CONFIG.FPW, reports/menus, dynamic paths/macros and deployment state that must also be captured and validated.
-
-## Installation prerequisites
-
-For the complete current audit workflow on Windows:
-
-| Component | Purpose |
-|---|---|
-| **Microsoft Visual FoxPro 9.0 SP2** | VFP runtime/COM host and authoritative runtime/compiler environment |
-| **FoxBin2Prg** | Binary-to-text conversion of VFP designer artifacts |
-| **Python 3** | Toolchain orchestration and DBF/audit tooling |
-| **OpenCode** | AI/tool integration layer |
-
-DBF/FPT export paths can operate without VFP9 through the bundled/Python data tooling, but that does not make the whole VFP application audit independent of VFP9.
-
-Environment variables:
-
-```text
-VFP_TOOLCHAIN_HOME
-VFP_FOXBIN2PRG_DIR
-VFP9_EXE
-```
-
-## Quick start
-
-```bash
-git clone https://github.com/PeterPirog/vfp-integration-toolchain.git
-cd vfp-integration-toolchain
-py -m pip install dbfread orjson xlsxwriter openpyxl dbf
-py install.py --foxbin2prg-dir "C:\path\to\foxbin2prg"
-```
-
-Then in a VFP9 SP2 project:
-
-```text
-vfp_status
-vfp_detect --directory <PROJECT_DIR>
-vfp_sync --directory <PROJECT_DIR>
-vfp_audit --source <PROJECT_DIR> --out <AUDIT_DIR>
-```
-
-When using the audit output, inspect the domain completeness statuses rather than assuming every VFP subsystem was fully captured.
-
-## Main OpenCode agent
-
-`@vfp-analyst` is the read-only analysis agent.
-
-It is required to use the local VFP9 SP2 knowledge contract, distinguish runtime facts from heuristics and avoid claiming unsupported completeness.
-
-Typical requests:
-
-```text
-@vfp-analyst analyze this VFP9 SP2 project
-@vfp-analyst find all references to CUSTOMERS
-@vfp-analyst analyze the indexes used by this form
-@vfp-analyst identify known VFP9 SP2 engine issues relevant to this code
-```
-
-## VFP artifacts
-
-The toolchain recognizes VFP artifact families including:
-
-```text
-PRG / H
-PJX + PJT
-SCX + SCT
-VCX + VCT
-FRX + FRT
-LBX + LBT
-MNX + MNT
-DBC + DCT + DCX
-DBF + optional FPT + CDX/IDX
-MPR / MPX
-APP / EXE / FXP
-DLL / FLL / OCX / TLB
-CONFIG.FPW
-```
-
-Important: `.lb2` is a FoxBin2Prg text representation; `.lbt` is the binary memo companion for `.lbx`.
-
-## Data and index analysis
-
-The toolchain knowledge model distinguishes native xBase access from VFP SQL, including:
-
-```text
-USE / SELECT work area
-SCAN / LOCATE / SEEK / INDEXSEEK
-CALCULATE / COUNT / SUM / AVERAGE
-REPLACE / APPEND / DELETE / RECALL
-SELECT-SQL / INSERT-SQL / UPDATE-SQL / DELETE-SQL
-views / CursorAdapter / SQL Pass-Through
-```
-
-Index/Rushmore analysis must consider:
-
-```text
-CDX vs IDX
-key expression
-filtered-index FOR expression
-active order/tag
-field types and key byte limits
-collation/code page
-SET ENGINEBEHAVIOR
+Rushmore
+SYS(3054)
 SET OPTIMIZE
-SYS(3054) evidence
+CDX/IDX expressions
+functional/composite indexes
+FOR vs WHILE
+CALCULATE/COUNT/SUM/MIN/MAX
+ENGINEBEHAVIOR
+code pages/collation
+local vs network DBF I/O
+locking/buffering/transactions
+remote views/SPT/CursorAdapter
+form startup/DataEnvironment
+Refresh/Paint/Timer hot paths
+COM/ActiveX crossings
+cold vs warm cache benchmarks
 ```
 
-The presence of a similar-looking index is not sufficient proof of FULL Rushmore optimization.
+Performance findings must distinguish:
 
-## Forms and classes
+```text
+MEASURED
+RUNTIME_PLAN_CONFIRMED
+DOCUMENTED_CANDIDATE
+PREDICTED
+NOT_TESTED
+REJECTED_CORRECTNESS_RISK
+```
 
-For source-level analysis, SCX/SCT and VCX/VCT are converted to FoxBin2Prg text representations.
+A predicted speedup must never be presented as measured.
 
-A safe future form refactor must preserve or explicitly authorize changes to:
+See `language/VFP9SP2_PERFORMANCE_OPTIMIZATION.md`.
 
-- object hierarchy,
-- class/base-class information,
-- layout/properties,
-- DataEnvironment/DataSession behavior,
-- methods/events,
-- data bindings,
-- work-area/index state.
-
-A final modified form is not accepted merely because the `.scx/.sct` files exist. The architecture requires compile, VFP reopen, final BIN2PRG round-trip, structural comparison and regression validation.
-
-## Known VFP9 SP2 defects
-
-The offline known-issues subsystem stores patch-level and workaround information locally.
-
-Examples covered by the local knowledge base include:
-
-- VFP9 SP2 vs post-SP2 hotfix build differences,
-- grouped-report defect addressed by Microsoft's post-SP2 hotfix,
-- ENGINEBEHAVIOR/code-page/Rushmore correctness traps,
-- historical form/DataSession/Grid/ListBox issues,
-- SQL/SPT/CursorAdapter/index edge cases,
-- report/ReportListener/ReportingApps issues,
-- table corruption and validation policy,
-- system capacity/index-key limits,
-- ActiveX/deployment risks.
-
-The catalog deliberately distinguishes Microsoft/VFPX-confirmed behavior from community-only or environment-dependent claims.
-
-## Safety
+## Source safety
 
 The current source-analysis plane is read-only.
 
-Never perform these against production/source data during audit:
+Never execute against source/production data during audit:
 
 ```text
 PRG2BIN
@@ -317,33 +344,67 @@ DELETE TAG
 uncontrolled DBF/DBC writes
 ```
 
-Experiments and future refactoring must operate on explicit copies/workspaces.
+Future write/refactor operations must work only on an explicit workspace copy with source hashes/preconditions.
 
-## Current important limitations
+## Target controlled refactor pipeline
 
-Before proceeding to unrestricted automated refactoring, the following remain significant implementation/knowledge gates:
+```text
+SOURCE immutable
+  -> snapshot/hash
+  -> pure/enhanced audit
+  -> semantic model
+  -> RefactorPlan
+  -> isolated workspace
+  -> VFP9 applies changes
+  -> compile/build
+  -> reopen
+  -> final FoxBin2Prg round-trip
+  -> structural/regression comparison
+  -> performance validation
+  -> PASS -> promote final artifact
+```
 
-- exact offline catalog of every VFP9 SP2 command/function/PEM syntax is not yet complete,
-- current SC2/VC2 parser still needs a proper lexer/state-machine semantic parser,
-- complete runtime language inventory tooling is not yet exposed as a finished OpenCode subsystem,
-- DBC/views/CursorAdapter/SPT semantic extraction is not yet complete,
-- CDX binary parsing must not be treated as authoritative without runtime confirmation,
-- automated SYS(3054) profiling/benchmarking is not yet complete,
-- controlled write/refactor/build plane is not yet complete.
+The existence of this architecture does not mean the current `main` already implements the complete write plane.
 
-See `language/VFP9SP2_CAPABILITY_MATRIX.md` and `language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md` before planning the next implementation phase.
+## Current state
+
+The executable toolset is still primarily a read-only audit/export system.
+
+High-priority remaining work includes:
+
+1. transport-neutral Python service layer,
+2. PURE READ support for all table-based VFP designer artifacts without VFP,
+3. full offline Help-derived language catalog,
+4. lexer/state-machine semantic parser,
+5. runtime language/index/DBC introspection,
+6. DBF_Anonymizer integration,
+7. complete SYS(3054)/benchmark performance subsystem,
+8. full DBC/views/CursorAdapter/application dependency audit,
+9. controlled VFP9 write/build/refactor pipeline,
+10. MCP adapter only after those service contracts stabilize.
+
+See `language/VFP9SP2_CAPABILITY_MATRIX.md` for the authoritative implemented-vs-roadmap status.
 
 ## Documentation
 
-- `docs/USAGE.md` — practical CLI/tool usage
+- `docs/USAGE.md` — current CLI/OpenCode usage
 - `docs/ARTIFACTS.md` — current audit outputs
+- `docs/MCP_TARGET_ARCHITECTURE.md` — future MCP-ready service architecture
+- `docs/mcp_capability_model.json` — machine-readable runtime capability model
+- `docs/ANONYMIZATION_INTEGRATION.md` — privacy/anonymization integration
 - `language/README.md` — VFP9 SP2 knowledge architecture
-- `language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md` — hard knowledge-completeness gate
-- `language/VFP9SP2_CAPABILITY_MATRIX.md` — implemented vs roadmap capability matrix
-- `language/VFP9SP2_OFFLINE_KNOWLEDGE_AND_ERRATA.md` — offline defects/limits/remediation knowledge
+- `language/VFP9SP2_PERFORMANCE_OPTIMIZATION.md` — performance knowledge contract
+- `language/VFP9SP2_CAPABILITY_MATRIX.md` — implementation/completeness matrix
 
-## Credits
+## Credits and licensing
 
-The toolchain relies on FoxBin2Prg by Fabio Zadro for VFP binary/text conversion and includes/uses other open-source components as documented in `THANKS.md` and the repository dependency files.
+Third-party components keep their own licenses and provenance. See `THANKS.md`.
 
-This project does not replace Microsoft Visual FoxPro 9.0 SP2. It uses the locally installed VFP9 SP2 runtime/compiler as the authoritative execution and validation environment.
+Primary related projects:
+
+- FoxBin2Prg — `https://github.com/fdbozzo/foxbin2prg`
+- dbfbridge — `https://github.com/PeterPirog/dbfbridge`
+- DBF_Anonymizer — `https://github.com/PeterPirog/DBF_Anonymizer`
+- VFPX VFP9 SP2 HelpFile — `https://github.com/VFPX/HelpFile`
+
+This project does not replace Microsoft Visual FoxPro 9.0 SP2. When installed, VFP9 SP2 remains the authoritative runtime/compiler backend for operations that depend on exact VFP execution semantics.
