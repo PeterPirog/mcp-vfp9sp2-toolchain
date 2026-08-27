@@ -40,3 +40,6 @@ AGENTS.md
 
 # Working scratch / local-only notes (not for distribution)
 Prompt build VFP 9.0  Translator.txt
+
+# Local audit outputs (never commit real project audits)
+audit_report/
