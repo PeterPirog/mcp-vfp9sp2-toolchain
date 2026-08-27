@@ -28,8 +28,13 @@
   },
   "knowledge": {
     "dialect": "microsoft.visual-foxpro.9.0.sp2",
+    "offlineRequired": true,
+    "unknownIssuePolicy": "KNOWN_ISSUE_NOT_FOUND: preserve fixture and diagnostics; never invent an online workaround while offline",
     "mandatory": [
       "language/VFP9SP2_REQUIRED_KNOWLEDGE.md",
+      "language/VFP9SP2_COMPLETE_APPLICATION_KNOWLEDGE.md",
+      "language/VFP9SP2_OFFLINE_KNOWLEDGE_AND_ERRATA.md",
+      "language/vfp9sp2_known_issues.json",
       "language/vfp9sp2_core_spec.json",
       "language/vfp9sp2_forms_spec.json",
       "language/vfp9sp2_indexes_rushmore_spec.json",
