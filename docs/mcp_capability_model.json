@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "target": "microsoft.visual-foxpro.9.0.sp2",
+  "transportIndependentCoreRequired": true,
+  "futureTransport": "MCP",
+  "mcpImplemented": false,
+  "capabilityClasses": {
+    "PURE_READ": {
+      "requiresVfp": false,
+      "sourceWriteAllowed": false
+    },
+    "PURE_WRITE_COPY": {
+      "requiresVfp": false,
+      "sourceWriteAllowed": false,
+      "writesOnlyToExplicitOutput": true
+    },
+    "VFP_READ_ENHANCED": {
+      "requiresVfp": true,
+      "sourceWriteAllowed": false
+    },
+    "VFP_WRITE_WORKSPACE": {
+      "requiresVfp": true,
+      "sourceWriteAllowed": false,
+      "workspaceRequired": true
+    },
+    "VFP_BUILD_VALIDATE": {
+      "requiresVfp": true,
+      "sourceWriteAllowed": false,
+      "workspaceRequired": true
+    },
+    "PRIVACY_SENSITIVE": {
+      "requiresVfp": "conditional",
+      "sensitiveOutput": true
+    }
+  },
+  "operations": {
+    "vfp_capabilities": ["PURE_READ"],
+    "vfp_detect": ["PURE_READ"],
+    "vfp_snapshot": ["PURE_READ"],
+    "vfp_read_artifact": ["PURE_READ"],
+    "vfp_read_table_schema": ["PURE_READ"],
+    "vfp_read_table_data": ["PURE_READ"],
+    "vfp_find_symbol": ["PURE_READ"],
+    "vfp_find_references": ["PURE_READ"],
+    "vfp_audit": ["PURE_READ"],
+    "vfp_analyze_indexes": ["PURE_READ"],
+    "vfp_language_lookup": ["PURE_READ"],
+    "vfp_known_issue_lookup": ["PURE_READ"],
+    "vfp_export_bin2prg": ["VFP_READ_ENHANCED"],
+    "vfp_runtime_inventory": ["VFP_READ_ENHANCED"],
+    "vfp_profile_rushmore": ["VFP_READ_ENHANCED"],
+    "vfp_validate_snippet": ["VFP_READ_ENHANCED"],
+    "vfp_anonymize_no_structural_cdx": ["PURE_WRITE_COPY", "PRIVACY_SENSITIVE"],
+    "vfp_anonymize_structural_cdx": ["PURE_WRITE_COPY", "PRIVACY_SENSITIVE", "VFP_WRITE_WORKSPACE"],
+    "vfp_anonymize_self_test": ["PRIVACY_SENSITIVE"],
+    "vfp_recover_data": ["PRIVACY_SENSITIVE"],
+    "vfp_create_refactor_workspace": ["VFP_WRITE_WORKSPACE"],
+    "vfp_apply_refactor_plan": ["VFP_WRITE_WORKSPACE"],
+    "vfp_validate_form": ["VFP_BUILD_VALIDATE"],
+    "vfp_build_project": ["VFP_BUILD_VALIDATE"]
+  },
+  "backends": {
+    "purePython": {
+      "requiresVfp": false,
+      "responsibilities": [
+        "artifact detection",
+        "hash/manifests",
+        "DBF/FPT read/export/reconstruction",
+        "direct designer table/memo read",
+        "static parsing",
+        "offline knowledge",
+        "heuristic CDX/IDX parsing",
+        "privacy transforms where valid without index rebuild"
+      ]
+    },
+    "vfp9": {
+      "requiresVfp": true,
+      "responsibilities": [
+        "FoxBin2Prg canonical conversion",
+        "runtime language/PEM inventory",
+        "runtime index/DBC introspection",
+        "SYS(3054)",
+        "COMPILE/BUILD",
+        "REINDEX",
+        "form/class/database workspace validation"
+      ]
+    }
+  },
+  "futureMcp": {
+    "resourcesReadOnly": true,
+    "mutationsExposedAsTools": true,
+    "projectSessionRequired": true,
+    "globalMutableVfpStateForbidden": true,
+    "pathRootsRequired": true,
+    "structuredJsonResultsRequired": true
+  },
+  "privacy": {
+    "dictionarySensitive": true,
+    "dictionaryExcludedFromNormalAudit": true,
+    "recoveryCanBeDisabled": true,
+    "saltMustNotBeLogged": true
+  }
+}
