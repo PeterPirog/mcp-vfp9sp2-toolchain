@@ -1,0 +1,77 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "domain": "application-build-runtime",
+  "projectArtifacts": {
+    "project": [".pjx", ".pjt"],
+    "application": [".app"],
+    "executable": [".exe"],
+    "comServer": [".exe", ".dll"],
+    "compiledProgram": [".fxp"],
+    "generatedMenu": [".mpr", ".mpx"]
+  },
+  "projectModel": {
+    "mustAuditPjxPjt": true,
+    "mustIdentifyMainFile": true,
+    "mustCaptureIncludedExcludedFiles": true,
+    "mustCaptureDependencies": true,
+    "buildCommands": ["BUILD PROJECT", "BUILD APP", "BUILD EXE", "BUILD DLL"],
+    "recompileAffects": ["programs", "forms", "reports", "labels", "visual class libraries", "database stored procedures"]
+  },
+  "applicationLifecycle": {
+    "mustIdentifyStartupEntryPoint": true,
+    "eventLoop": {
+      "start": "READ EVENTS",
+      "stop": "CLEAR EVENTS",
+      "shutdownHook": "ON SHUTDOWN",
+      "requiredForModelessRuntimeApplications": true
+    },
+    "startupConfigurationSources": [
+      "main PRG/form",
+      "CONFIG.FPW",
+      "SET commands",
+      "menu setup code",
+      "DataEnvironment.BeforeOpenTables for private data sessions",
+      "_STARTUP/system environment"
+    ],
+    "mustTrace": ["DO", "DO FORM", "SET PROCEDURE", "SET CLASSLIB", "SET PATH", "READ EVENTS", "CLEAR EVENTS", "ON SHUTDOWN"]
+  },
+  "configuration": {
+    "configFile": "CONFIG.FPW",
+    "mustDetectInternalAndExternalConfig": true,
+    "mustDetectAllowExternal": true,
+    "mustCaptureSettings": [
+      "SET ENGINEBEHAVIOR", "SET COMPATIBLE", "SET OPTIMIZE", "SET EXACT", "SET ANSI", "SET DELETED",
+      "SET EXCLUSIVE", "SET REPROCESS", "SET MULTILOCKS", "SET COLLATE", "SET CPCOMPILE", "SET STRICTDATE",
+      "SET TABLEVALIDATE", "SET DATE", "SET CENTURY", "SET SAFETY", "SET PROCEDURE", "SET CLASSLIB", "SET PATH",
+      "SET RESOURCE", "SET REPORTBEHAVIOR"
+    ]
+  },
+  "runtimeAndDeployment": {
+    "exeRequiresVfpRuntimeLibraries": true,
+    "mustInventoryRuntimeDependencies": true,
+    "mustInventoryExternalFiles": ["VFP runtime DLLs", "resource files", "OCX", "DLL", "FLL", "type libraries", "help files", "configuration files", "data files"],
+    "foxUserResourcePair": ["FoxUser.dbf", "FoxUser.fpt"],
+    "mustCaptureSearchPathAndDefaultDirectory": true,
+    "mustDetectComServerClasses": true,
+    "olePublicRequiredForBuildDll": true
+  },
+  "buildValidation": {
+    "mustCompileChangedSources": true,
+    "mustCaptureErrFiles": true,
+    "mustReportUnresolvedReferences": true,
+    "mustBuildOnlyInExplicitWorkspace": true,
+    "sourceMustRemainReadOnly": true
+  },
+  "references": [
+    "https://vfphelp.com/vfp9/html/8d2c0796-23a7-45c8-a166-637152839f76.htm",
+    "https://www.vfphelp.com/help/_5wn12pctr.htm",
+    "https://vfphelp.com/help/html/2313b88d-751b-4b6d-800a-463d78112b5c.htm",
+    "https://vfphelp.com/vfp9/html/d0dc130c-71fb-4157-a083-2d8c0bbcf886.htm",
+    "https://www.vfphelp.com/help/_5WN12P3PX.htm",
+    "https://www.vfphelp.com/help/_5wn12pe75.htm",
+    "https://www.vfphelp.com/vfp9/html/e4da0efc-19ca-4eb4-a1b7-c5f7d60a4d9c.htm",
+    "https://www.vfphelp.com/vfp9/html/5f169eb2-ac64-4836-bd67-6572f33d8624.htm",
+    "https://vfphelp.com/vfp9/html/9877952e-f860-41ef-a67e-e33af4c7970f.htm"
+  ]
+}
