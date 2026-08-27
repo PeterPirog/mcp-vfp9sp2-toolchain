@@ -1,0 +1,80 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "domain": "forms",
+  "artifactPairs": {
+    "form": [".scx", ".sct"],
+    "visualClass": [".vcx", ".vct"],
+    "report": [".frx", ".frt"],
+    "menu": [".mnx", ".mnt"],
+    "project": [".pjx", ".pjt"],
+    "database": [".dbc", ".dct", ".dcx"]
+  },
+  "storageModel": {
+    "scxIsTableBased": true,
+    "sctIsMemoCompanion": true,
+    "rawBinaryIsNotSourceCode": true,
+    "preferredAnalysisFlow": ["SCX/SCT", "VFP9/FoxBin2Prg BIN2PRG", "SC2", "lexer/parser", "semantic model"],
+    "preferredWriteFlow": ["source hash snapshot", "workspace copy", "RefactorPlan patch", "VFP9 apply", "COMPILE FORM", "VFP9 reopen", "final BIN2PRG", "compare", "PASS/FAIL"]
+  },
+  "mandatoryObjectClasses": [
+    "Form", "FormSet", "PageFrame", "Page", "Container", "Grid", "Column", "Header",
+    "TextBox", "EditBox", "ComboBox", "ListBox", "CheckBox", "OptionGroup", "OptionButton",
+    "CommandButton", "CommandGroup", "Spinner", "Label", "Image", "Shape", "Line", "Timer",
+    "OLEContainer", "OLEBoundControl", "DataEnvironment", "Cursor", "CursorAdapter", "Relation"
+  ],
+  "runtimeInventoryRequired": true,
+  "runtimeInventoryMechanism": "AMEMBERS()",
+  "mandatoryComparisonProperties": [
+    "Name", "Class", "ClassLibrary", "BaseClass", "Parent", "Top", "Left", "Width", "Height",
+    "Caption", "FontName", "FontSize", "FontBold", "FontItalic", "ForeColor", "BackColor",
+    "Enabled", "Visible", "ReadOnly", "TabIndex", "ControlSource", "RowSource", "RowSourceType",
+    "RecordSource", "RecordSourceType", "Value", "InputMask", "Format", "Picture", "PictureVal",
+    "ToolTipText", "Anchor", "DockPosition"
+  ],
+  "highValueEvents": [
+    "Load", "Init", "Activate", "Deactivate", "Refresh", "Destroy", "Unload", "QueryUnload",
+    "Resize", "Click", "DblClick", "RightClick", "When", "Valid", "GotFocus", "LostFocus",
+    "InteractiveChange", "ProgrammaticChange", "KeyPress", "MouseDown", "MouseMove", "MouseUp",
+    "Timer", "BeforeOpenTables", "AfterCloseTables"
+  ],
+  "dataEnvironment": {
+    "required": true,
+    "properties": [
+      "AutoOpenTables", "AutoCloseTables", "InitialSelectedAlias", "DataSource", "DataSourceType",
+      "Alias", "CursorSource", "Order", "Filter"
+    ],
+    "relationSemanticsRequired": true,
+    "mustAuditMethodsAndEvents": true
+  },
+  "dataSession": {
+    "mustDetect": true,
+    "reason": "Private data sessions can isolate aliases and SET state from the caller."
+  },
+  "methodInventory": {
+    "requiredFields": ["objectPath", "ownerClass", "name", "kind", "lineStart", "lineEnd", "parameters", "sourceSha256", "sourceText"]
+  },
+  "validation": {
+    "compileFormRequired": true,
+    "reopenInVfpRequired": true,
+    "roundtripBin2PrgRequired": true,
+    "compareObjectInventory": true,
+    "compareMethodInventory": true,
+    "encodingValidation": true,
+    "duplicateCodeValidation": true,
+    "foreignLanguageArtifactValidation": true,
+    "unexpectedStructuralChangeIsFailure": true
+  },
+  "writeSafety": {
+    "llmMayWriteBinaryScxDirectly": false,
+    "writeOnlyToExplicitWorkspace": true,
+    "sourceShaMustRemainUnchanged": true,
+    "companionsAreAtomic": true
+  },
+  "references": [
+    "https://vfphelp.com/vfp9/_5wn12pc0x.htm",
+    "https://www.vfphelp.com/help/_5wn12p3gh.htm",
+    "https://vfphelp.com/vfp9/html/19f2a679-bbf3-4343-9ad8-fd20824e8198.htm",
+    "https://github.com/VFPX/HelpFile"
+  ]
+}
