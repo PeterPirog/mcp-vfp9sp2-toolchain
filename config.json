@@ -26,6 +26,19 @@
   "dbfExport": {
     "formats": ["jsonl", "csv", "json", "xlsx"]
   },
+  "knowledge": {
+    "dialect": "microsoft.visual-foxpro.9.0.sp2",
+    "mandatory": [
+      "language/VFP9SP2_REQUIRED_KNOWLEDGE.md",
+      "language/vfp9sp2_core_spec.json",
+      "language/vfp9sp2_forms_spec.json",
+      "language/vfp9sp2_indexes_rushmore_spec.json",
+      "language/vfp9sp2_application_build_runtime_spec.json",
+      "language/vfp9sp2_data_access_dbc_spec.json",
+      "language/vfp9sp2_ui_reports_menus_integration_spec.json",
+      "language/VFP9SP2_CAPABILITY_MATRIX.md"
+    ]
+  },
   "defaultExcludes": [
     ".git",
     ".vfp-ai",
@@ -38,7 +51,7 @@
   ],
   "artifacts": {
     "bin2prg": ["pjx", "scx", "vcx", "frx", "lbx", "mnx", "dbc", "dbf"],
-    "indexText": ["prg", "h", "pj2", "sc2", "vc2", "fr2", "mn2", "dc2", "db2", "jsonl", "schema.json"],
-    "detect": ["prg", "h", "pjx", "pjt", "pj2", "scx", "sct", "sc2", "vcx", "vct", "vc2", "frx", "frt", "fr2", "mnx", "mnt", "mn2", "lbx", "lb2", "dbc", "dct", "dcx", "dc2", "dbf", "fpt", "cdx"]
+    "indexText": ["prg", "h", "pj2", "sc2", "vc2", "fr2", "mn2", "dc2", "db2", "lb2", "jsonl", "schema.json"],
+    "detect": ["prg", "h", "pjx", "pjt", "pj2", "scx", "sct", "sc2", "vcx", "vct", "vc2", "frx", "frt", "fr2", "mnx", "mnt", "mn2", "lbx", "lbt", "lb2", "dbc", "dct", "dcx", "dc2", "dbf", "fpt", "cdx", "idx", "mpr", "mpx", "app", "exe", "fxp", "dll", "fll", "ocx", "tlb", "fpw"]
   }
 }
