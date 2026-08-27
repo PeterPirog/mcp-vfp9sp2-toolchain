@@ -1,0 +1,68 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "policy": {
+    "compilerIsFinalSyntaxAuthority": true,
+    "runtimeValidationRequiredForChangedCode": true,
+    "productionStatuses": ["VERIFIED_RUNTIME_AND_HELP", "VERIFIED_HELP"]
+  },
+  "lexical": {
+    "caseInsensitiveKeywords": true,
+    "fullLineComments": ["*"],
+    "inlineComments": ["&&"],
+    "lineContinuation": ";",
+    "stringDelimiters": [["\"", "\""], ["'", "'"], ["[", "]"]],
+    "logicalLiterals": [".T.", ".F."],
+    "nullLiteral": ".NULL.",
+    "macroSubstitution": "&"
+  },
+  "blocks": [
+    {"open":"IF","middle":["ELSE"],"close":"ENDIF"},
+    {"open":"DO CASE","middle":["CASE","OTHERWISE"],"close":"ENDCASE"},
+    {"open":"DO WHILE","middle":[],"close":"ENDDO"},
+    {"open":"FOR","middle":[],"close":"ENDFOR"},
+    {"open":"FOR EACH","middle":[],"close":"ENDFOR"},
+    {"open":"SCAN","middle":[],"close":"ENDSCAN"},
+    {"open":"TRY","middle":["CATCH","FINALLY"],"close":"ENDTRY"},
+    {"open":"WITH","middle":[],"close":"ENDWITH"},
+    {"open":"TEXT","middle":[],"close":"ENDTEXT"},
+    {"open":"DEFINE CLASS","middle":[],"close":"ENDDEFINE"},
+    {"open":"PROCEDURE","middle":[],"close":"ENDPROC"},
+    {"open":"FUNCTION","middle":[],"close":"ENDFUNC"},
+    {"open":"PRINTJOB","middle":[],"close":"ENDPRINTJOB"}
+  ],
+  "relationalOperators": ["<", ">", "=", "<>", "#", "!=", "<=", ">=", "=="],
+  "preprocessorDirectives": ["#DEFINE", "#UNDEF", "#IF", "#ELIF", "#ELSE", "#ENDIF", "#IFDEF", "#IFNDEF", "#INCLUDE", "#INSERT", "#NAME"],
+  "semanticFamilies": {
+    "workArea": ["SELECT", "USE"],
+    "navigation": ["GO", "GOTO", "SKIP", "SEEK", "LOCATE", "CONTINUE", "SCAN"],
+    "indexing": ["INDEX", "SET ORDER", "SET KEY", "SET FILTER", "SET RELATION", "REINDEX"],
+    "aggregation": ["CALCULATE", "COUNT", "SUM", "AVERAGE", "TOTAL"],
+    "recordMutation": ["REPLACE", "APPEND", "DELETE", "RECALL", "GATHER"],
+    "sql": ["SELECT - SQL", "INSERT - SQL", "UPDATE - SQL", "DELETE - SQL", "CREATE CURSOR - SQL", "CREATE TABLE - SQL", "ALTER TABLE - SQL"],
+    "locking": ["RLOCK()", "FLOCK()", "UNLOCK", "SET REPROCESS", "SET MULTILOCKS"],
+    "transactions": ["BEGIN TRANSACTION", "END TRANSACTION", "ROLLBACK", "TABLEUPDATE()", "TABLEREVERT()"]
+  },
+  "engineBehavior": {
+    "syntax": "SET ENGINEBEHAVIOR 70 | 80 | 90",
+    "sysFunction": "SYS(3099 [, 70 | 80 | 90])",
+    "vfp9Mode": 90
+  },
+  "runtimeInventory": {
+    "commands": "ALANGUAGE(array, 1)",
+    "functions": "ALANGUAGE(array, 2)",
+    "baseClasses": "ALANGUAGE(array, 3)",
+    "dbcEvents": "ALANGUAGE(array, 4)",
+    "pem": "AMEMBERS(array, className, 1)"
+  },
+  "environmentSettings": [
+    "SET ENGINEBEHAVIOR", "SET COMPATIBLE", "SET OPTIMIZE", "SET EXACT", "SET ANSI",
+    "SET DELETED", "SET EXCLUSIVE", "SET REPROCESS", "SET MULTILOCKS", "SET COLLATE",
+    "SET CPCOMPILE", "SET STRICTDATE", "SET TABLEVALIDATE", "SET DATE", "SET CENTURY",
+    "SET SAFETY", "SET PROCEDURE", "SET CLASSLIB", "SET PATH"
+  ],
+  "types": {
+    "general": ["Blob", "Character", "Currency", "Date", "DateTime", "Logical", "Numeric", "Varbinary", "Variant"],
+    "fieldOnlyAdditional": ["Character (Binary)", "Double", "Float", "General", "Integer", "Integer (Autoinc)", "Memo", "Memo (Binary)", "Varchar", "Varchar (Binary)"]
+  }
+}
