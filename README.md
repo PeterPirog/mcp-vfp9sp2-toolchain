@@ -125,6 +125,26 @@ logic is no longer duplicated in TypeScript.
 See `docs/CORE_SERVICE.md` for the service contract, result model and
 dependency pins.
 
+## Offline runtime (implemented)
+
+The Python runtime is a **closed, reproducible dependency set**. On a Windows
+machine after installing the offline bundle:
+
+```text
+PURE READ      : VFP not required.
+Internet       : NOT required at runtime (no PyPI fallback, no network).
+VFP9 SP2       : required ONLY for enhanced/runtime/write/build capabilities.
+MCP            : not implemented yet.
+```
+
+- Lock manifest: `runtime/runtime-dependencies.json` (exact versions + SHA256 per wheel).
+- Build (maintainer, network allowed): `scripts/build_offline_bundle.ps1` -> `dist/` (never committed).
+- Install (target machine, network FORBIDDEN): `scripts/install_offline.ps1` -> `pip --no-index --find-links <local wheelhouse>`.
+- Verify: `scripts/verify_offline_runtime.py` (imports, pins, origin, versions, hashes, capabilities without VFP).
+- Tests: `tests/test_offline_install.py` (clean venv, `--no-index`, DBF pure-read fixture, no VFP) and `tests/test_offline_dbf_read.py`.
+
+See `docs/OFFLINE_RUNTIME.md` and `docs/OFFLINE_RUNTIME_DEPENDENCIES.md`.
+
 ## Future MCP architecture
 
 MCP is intended to be a thin transport adapter over the same Core Service.
