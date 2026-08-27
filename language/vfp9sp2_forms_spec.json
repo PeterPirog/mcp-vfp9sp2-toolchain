@@ -1,11 +1,12 @@
 {
-  "specVersion": "0.1.0",
+  "specVersion": "0.2.0",
   "dialect": "microsoft.visual-foxpro.9.0.sp2",
   "domain": "forms",
   "artifactPairs": {
     "form": [".scx", ".sct"],
     "visualClass": [".vcx", ".vct"],
     "report": [".frx", ".frt"],
+    "label": [".lbx", ".lbt"],
     "menu": [".mnx", ".mnt"],
     "project": [".pjx", ".pjt"],
     "database": [".dbc", ".dct", ".dcx"]
