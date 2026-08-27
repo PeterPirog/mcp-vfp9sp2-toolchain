@@ -41,23 +41,19 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install test runner (dev-only, NOT a runtime dependency)
-        run: python -m pip install --upgrade pytest
+      - name: Install test runner + declared runtime reader (dev/CI-only action)
+        # dbfread is the documented runtime DBF reader dependency (THANKS.md);
+        # installing it here is a CI provisioning step, not a runtime download
+        # by the toolchain — the tool itself never pip-installs at request time.
+        run: python -m pip install --upgrade pytest dbfread
 
-      - name: Assert NO VFP9 on the runner (intentional PURE_READ CI)
-        run: |
-          python - <<'PY'
-          import os, sys
-          exe = os.environ.get("VFP9_EXE") or r"C:\Program Files (x86)\Microsoft Visual FoxPro 9\vfp9.exe"
-          if os.path.isfile(exe):
-              sys.exit("PURE_READ CI must run without VFP9: found %s" % exe)
-          print("OK: no VFP9 on runner (intentional)")
-          PY
+      # The no-VFP guarantee is enforced by the test suite itself: the tests
+      # point VFP9_EXE / VFP_FOXBIN2PRG_DIR at non-existent paths (see the
+      # test env block below) and assert the PURE_READ plane still passes.
+      # GitHub runners ship without Visual FoxPro.
 
       - name: Baseline import check (no side effects, no VFP)
-        run: |
-          set -eu
-          python -c "import sys, os; sys.path.insert(0, 'src'); import vfp_toolchain; print('import OK')"
+        run: python -c "import sys, os; sys.path.insert(0, 'src'); import vfp_toolchain; print('import OK')"
 
       - name: Test suite (VFP-dependent tests are skipped, never masked)
         run: python -m pytest tests -v --color=yes
