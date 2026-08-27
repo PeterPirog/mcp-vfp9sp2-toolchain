@@ -9,6 +9,8 @@ Run:  py -m pytest tests/ -v   (or:  py tests/test_common.py)
 import os
 import sys
 
+import pytest
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
@@ -57,8 +59,11 @@ def test_foxbin2prg_program_returns_path():
     assert os.path.basename(p).lower() == "foxbin2prg.prg", "wrong basename: %s" % p
 
 
+@pytest.mark.skipif(
+    os.name != "nt",
+    reason="asserts Windows path semantics (C:\\ prefix); target platform is Windows")
 def test_foxbin2prg_env_override():
-    """VFP_FOXBIN2PRG_DIR must override the default."""
+    """VFP_FOXBIN2PRG_DIR must override the default (Windows path semantics)."""
     orig = os.environ.get("VFP_FOXBIN2PRG_DIR")
     try:
         os.environ["VFP_FOXBIN2PRG_DIR"] = r"C:\fake\foxbin2prg"
