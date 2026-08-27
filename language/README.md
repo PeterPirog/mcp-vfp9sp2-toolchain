@@ -14,6 +14,19 @@ Do not use one frozen keyword list as the syntax authority. Use three layers:
 
 Production code must not be generated from `UNVERIFIED` language facts.
 
+## Mandatory companion specifications
+
+The following files are normative parts of this language subsystem and must be loaded by audit/refactor agents and tools:
+
+- `VFP9SP2_REQUIRED_KNOWLEDGE.md` — mandatory language, work-area, forms, DataEnvironment, SCX/SCT, DBF/CDX/DBC, Rushmore and validation contract.
+- `vfp9sp2_forms_spec.json` — machine-readable form/object/SCX-SCT validation model.
+- `vfp9sp2_indexes_rushmore_spec.json` — machine-readable index, SEEK, CDX/IDX and Rushmore model.
+- `vfp9sp2_core_spec.json` — lexical/core language and environment model.
+- `vfp9sp2_language.schema.json` — normalized language-element schema.
+- `extract_vfp9sp2_runtime_inventory.prg` — runtime-derived command/function/class/PEM inventory.
+
+A tool or agent that loads only `vfp9sp2_core_spec.json` must report the VFP knowledge base as PARTIAL, because form storage/validation and index/Rushmore semantics are separate mandatory domains.
+
 ## Source-of-truth priority
 
 1. Installed Microsoft Visual FoxPro 9 SP2: `VERSION()`, `SYS(3099)`, `CPCURRENT()`, `ALANGUAGE()`, `AMEMBERS()`, `APROCINFO()`, `COMPILE`, `COMPILE FORM`.
@@ -305,7 +318,10 @@ For changed SCX/SCT:
 ```text
 language/
   README.md
+  VFP9SP2_REQUIRED_KNOWLEDGE.md
   vfp9sp2_core_spec.json
+  vfp9sp2_forms_spec.json
+  vfp9sp2_indexes_rushmore_spec.json
   vfp9sp2_language.schema.json
   extract_vfp9sp2_runtime_inventory.prg
   runtime/
@@ -328,4 +344,4 @@ vfp_validate_form
 
 The LLM is not the syntax authority.
 
-The LLM proposes code. The toolchain checks the language catalog and the VFP9 compiler before that code can enter the write/refactor plane.
+The LLM proposes code. The toolchain checks the complete VFP9 SP2 knowledge contract, runtime catalog and VFP9 compiler before that code can enter the write/refactor plane.
