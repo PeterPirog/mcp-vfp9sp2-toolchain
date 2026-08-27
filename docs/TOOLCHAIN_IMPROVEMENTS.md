@@ -1,4 +1,4 @@
-# Rekomendacje ulepszeń vfp-integration-toolchain
+# Rekomendacje ulepszeń mcp-vfp9sp2-toolchain
 
 ## Kontekst
 

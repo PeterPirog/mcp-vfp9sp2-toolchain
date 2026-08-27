@@ -1,4 +1,4 @@
-# DBF anonymization integration for vfp-integration-toolchain
+# DBF anonymization integration for mcp-vfp9sp2-toolchain
 
 Status: architecture contract. Integration is not yet implemented in the main toolchain.
 

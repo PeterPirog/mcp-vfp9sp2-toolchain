@@ -4,7 +4,7 @@ Target dialect:
 
 `microsoft.visual-foxpro.9.0.sp2`
 
-This directory is the normative knowledge layer for `vfp-integration-toolchain` and OpenCode agents that analyze, optimize, refactor or generate Visual FoxPro 9.0 SP2 applications.
+This directory is the normative knowledge layer for `mcp-vfp9sp2-toolchain` and OpenCode agents that analyze, optimize, refactor or generate Visual FoxPro 9.0 SP2 applications.
 
 ## Core architectural rule
 

@@ -152,7 +152,7 @@ def main():
         print("[DRY-RUN] No changes will be made (no symlinks, no verify).")
 
     print("=" * 60)
-    print("VFP Integration Toolchain Installer")
+    print("MCP VFP9 SP2 Toolchain Installer")
     print("=" * 60)
     print()
     print("Toolchain root:", toolchain)

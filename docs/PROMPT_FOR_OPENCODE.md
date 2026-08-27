@@ -1,14 +1,14 @@
-# PROMPT DLA OPENCODE — ULEPSZENIE vfp-integration-toolchain
+# PROMPT DLA OPENCODE — ULEPSZENIE mcp-vfp9sp2-toolchain
 
 ## Kontekst
 
-Repozytorium: `D:\Opencode projects\Project VFP\vfp-integration-toolchain` (branch: `main`)
+Repozytorium: `D:\Opencode projects\Project VFP\mcp-vfp9sp2-toolchain` (branch: `main`)
 Dokument rekomendacji: `docs/TOOLCHAIN_IMPROVEMENTS.md` (już utworzony)
 
 ## Instrukcja dla OpenCode
 
 ```
-Pracujesz w repozytorium vfp-integration-toolchain na branchu głównym.
+Pracujesz w repozytorium mcp-vfp9sp2-toolchain na branchu głównym.
 
 UTWÓRZ NOWY BRANCH: `feature/performance-audit-tools`
 
