@@ -12,11 +12,25 @@ The LLM is **not** the syntax or semantics authority.
 
 Use three verification layers:
 
-1. documented VFP9 SP2 syntax/semantics,
+1. documented VFP9 SP2 syntax/semantics stored locally in this repository,
 2. runtime inventory from the exact installed VFP9 SP2,
 3. VFP9 compiler/runtime validation of generated or changed code.
 
 Production changes must never depend on `UNVERIFIED` or merely `HEURISTIC` language facts.
+
+## Offline-first rule
+
+The VFP toolchain is expected to work without Internet access at runtime. Web URLs in the knowledge base are provenance for maintainers, not runtime dependencies.
+
+When offline, agents/tools must use:
+
+- this local knowledge directory,
+- `language/vfp9sp2_known_issues.json`,
+- runtime introspection from installed VFP9 SP2,
+- the local compiler/runtime,
+- local project artifacts and regression fixtures.
+
+If an observed defect is absent from the local issue catalog and cannot be proven from runtime evidence, return `KNOWN_ISSUE_NOT_FOUND`, preserve the failing fixture and diagnostics, and do **not** invent an Internet workaround.
 
 ## Mandatory knowledge files
 
@@ -24,6 +38,8 @@ Every complete audit/refactor/build agent must treat all of the following as one
 
 - `VFP9SP2_REQUIRED_KNOWLEDGE.md` — core mandatory language, work-area, forms, DBF/CDX/DBC, Rushmore and validation knowledge.
 - `VFP9SP2_COMPLETE_APPLICATION_KNOWLEDGE.md` — complete application lifecycle: PJX/build/startup, CONFIG.FPW, DBC/views, CursorAdapter, SPT, menus, reports, labels, COM/ActiveX/DLL/FLL and deployment.
+- `VFP9SP2_OFFLINE_KNOWLEDGE_AND_ERRATA.md` — offline patch baseline, known VFP9/SP2 defects, compatibility traps, system limits and remediation policy.
+- `vfp9sp2_known_issues.json` — machine-readable known-issue/workaround catalog for offline diagnostics.
 - `VFP9SP2_CAPABILITY_MATRIX.md` — separates knowledge present in the repo from executable capabilities actually implemented.
 - `vfp9sp2_core_spec.json` — machine-readable lexical/core language and environment model.
 - `vfp9sp2_forms_spec.json` — form/class/SCX-SCT/DataEnvironment validation model.
@@ -46,9 +62,9 @@ A tool or agent that does not load or implement the domains relevant to the dete
    - `AMEMBERS()`
    - `APROCINFO()`
    - `COMPILE`, `COMPILE FORM` and other relevant compile/build operations.
-2. Microsoft VFP9 SP2 Help / VFPX Help mirror.
+2. Local repository knowledge and the preserved VFP9 SP2 Help-derived contracts.
 3. FoxBin2Prg text representation for safe analysis and round-trip comparison.
-4. Community references only as supporting evidence.
+4. Community references only as supporting evidence for maintainers; not a runtime authority.
 
 ## Confidence statuses
 
@@ -64,6 +80,15 @@ Language and semantic facts should use statuses such as:
 - `UNVERIFIED`
 - `INVALID_FOR_VFP9SP2`
 
+Known defects/workarounds additionally use:
+
+- `MICROSOFT_CONFIRMED`
+- `MICROSOFT_DOCUMENTED_BEHAVIOR`
+- `MICROSOFT_SP2_FIXED`
+- `VFPX_CONFIRMED`
+- `COMMUNITY_CONFIRMED`
+- `ENVIRONMENT_DEPENDENT`
+
 ## Runtime language inventory
 
 VFP9 SP2 exposes its language inventory through:
@@ -77,7 +102,18 @@ ALANGUAGE(ArrayName, 4) && DBC events
 
 Use `AMEMBERS()` to enumerate class/object properties, methods and events.
 
-Runtime inventory confirms that an element exists. Documentation is still needed for exact syntax and semantics.
+Runtime inventory confirms that an element exists. Local documentation metadata is still needed for exact syntax and semantics.
+
+## Runtime patch inventory
+
+Record the exact installed VFP build. Important baselines stored in the offline errata catalog include:
+
+```text
+9.0.0.5815  VFP9 SP2 baseline
+9.0.0.7423  SP2 + Microsoft post-SP2 hotfix baseline
+```
+
+Do not assume the IDE EXE and deployed VFP runtime DLLs have the same build.
 
 ## Parser requirements
 
@@ -123,7 +159,7 @@ SYS(3099)
 
 `SET COMPATIBLE` is a separate compatibility mechanism.
 
-Do not judge VFP9 syntax by VFP7/VFP8 limits or semantics.
+Do not judge VFP9 syntax by VFP7/VFP8 limits or semantics. Also consult the offline known-issues catalog before changing legacy SQL solely to improve speed; several correctness behaviors depend on ENGINEBEHAVIOR and code pages.
 
 ## Forms and visual classes
 
@@ -158,6 +194,8 @@ Analyze both SQL and native xBase access:
 
 Rushmore status must use runtime evidence such as `SYS(3054)` whenever claiming FULL/PARTIAL/NONE. An index that merely looks compatible is not proof.
 
+Before proposing an index, also check the offline system-capacity/key-size limits and known code-page/ENGINEBEHAVIOR correctness traps.
+
 ## Complete application domains
 
 A tool that claims complete VFP application support must also understand:
@@ -173,21 +211,23 @@ A tool that claims complete VFP application support must also understand:
 - labels LBX/LBT,
 - COM/OLE/ActiveX and automation servers,
 - DECLARE DLL/FLL/native dependencies,
-- runtime/deployment resources and 32-bit compatibility.
+- runtime/deployment resources and 32-bit compatibility,
+- engine/runtime patch level and offline known-issue applicability.
 
 ## Compiler/refactor validation
 
 For generated or changed code:
 
-1. verify introduced language elements against the language catalog,
-2. parse structure and reject foreign-language artifacts,
-3. compile using the exact installed VFP9 SP2,
-4. for visual artifacts operate only on an isolated workspace copy,
-5. reopen/round-trip through VFP/FoxBin2Prg,
-6. compare object/method/data/index invariants,
-7. run regression tests,
-8. benchmark performance claims,
-9. promote only after `PASS`.
+1. verify introduced language elements against the local language catalog,
+2. check relevant entries in `vfp9sp2_known_issues.json`,
+3. parse structure and reject foreign-language artifacts,
+4. compile using the exact installed VFP9 SP2,
+5. for visual artifacts operate only on an isolated workspace copy,
+6. reopen/round-trip through VFP/FoxBin2Prg,
+7. compare object/method/data/index invariants,
+8. run regression tests,
+9. benchmark performance claims,
+10. promote only after `PASS`.
 
 The source project remains immutable.
 
