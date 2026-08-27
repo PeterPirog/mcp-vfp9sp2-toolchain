@@ -39,6 +39,7 @@ from .errors import (
     EC_DEPENDENCY_VERSION_MISMATCH,
     EC_FOXBIN2PRG_NOT_AVAILABLE,
     EC_KNOWLEDGE_INCOMPLETE,
+    EC_OFFLINE_RUNTIME_INCOMPLETE,
     EC_VFP9_NOT_INSTALLED,
 )
 from .models import OperationResult
@@ -138,14 +139,18 @@ class VFPToolchainService(object):
             "pinVerified": db.get("pinVerified", False),
             "moduleOriginVerified": db.get("moduleOriginVerified", False),
         }
+        # A vendored snapshot that is unavailable/mismatched is a LIMITED
+        # capability, reported as a warning with its domain code — the
+        # discovery operation itself still succeeded (pureRead remains
+        # available). Only a corrupt config.json is a real discovery error.
         if not db.get("available", False):
             if not db.get("pinVerified", False):
-                errors.append(EC_DEPENDENCY_VERSION_MISMATCH +
-                              ": dbfbridge vendored pin does not match the "
-                              "expected upstream commit")
+                warnings.append(EC_DEPENDENCY_VERSION_MISMATCH +
+                                ": dbfbridge vendored pin does not match the "
+                                "expected upstream commit")
             else:
-                errors.append(EC_DEPENDENCY_NOT_AVAILABLE +
-                              ": dbfbridge snapshot unavailable")
+                warnings.append(EC_DEPENDENCY_NOT_AVAILABLE +
+                                ": dbfbridge snapshot unavailable")
 
         # DBF_Anonymizer (VENDORED, status-only in this phase)
         from .backends import DBFAnonymizerBackend
@@ -159,9 +164,23 @@ class VFPToolchainService(object):
             "dbfbridgeCompatible": an.get("dbfbridgeCompatible", False),
         }
         if not an.get("available", False):
-            errors.append(EC_ANONYMIZER_NOT_AVAILABLE +
-                          ": vendored snapshot unavailable (pin, version or "
-                          "dbfbridge compatibility not verified)")
+            warnings.append(EC_ANONYMIZER_NOT_AVAILABLE +
+                            ": vendored snapshot unavailable (pin, version or "
+                            "dbfbridge compatibility not verified)")
+
+        # Offline runtime closure (Phase 2): PURE_READ verification of the
+        # dependency closure. Offline is a deployment property, NOT a new
+        # capability class — this block only reports runtime state.
+        from .runtime import offline_runtime_status
+        data["offlineRuntime"] = offline_runtime_status(root=self._root)
+        if not data["offlineRuntime"]["verified"]:
+            warnings.append(EC_OFFLINE_RUNTIME_INCOMPLETE +
+                            ": offline dependency closure not complete "
+                            "(missing: %s, mismatched: %s)"
+                            % (",".join(data["offlineRuntime"]["missing"])
+                               or "-",
+                               ",".join(data["offlineRuntime"]["mismatched"])
+                               or "-"))
 
         # Knowledge (offline contract)
         k = cfg.get("knowledge") or {}
