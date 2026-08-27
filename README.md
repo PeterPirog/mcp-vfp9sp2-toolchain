@@ -289,6 +289,26 @@ The exact offline Help/catalog gate is not closed yet; see `language/VFP9SP2_KNO
 
 ## Performance optimization
 
+> Implemented in this branch (see `docs/TOOLCHAIN_IMPROVEMENTS.md` for the full guide):
+>
+> ```bash
+> # Count risky/slow patterns across the whole project (no VFP9 needed)
+> opencode vfp_count_patterns --project . --patterns "RLOCK,UNLOCK ALL,SET FILTER,SET OPTIMIZE,SET MULTILOCKS"
+>
+> # Build the per-procedure performance access map for one form (no VFP9 needed)
+> opencode vfp_form_perf --form .vfp-ai/source/forms/karty_pr_pp.sc2 --tables-dir Dane
+>
+> # Benchmark critical operations BEFORE/AFTER refactoring (VFP9 required)
+> opencode vfp_benchmark --project . --table ksiazka_k_d --operation count_for \
+>   --expression "LEFT(k_pr_sp_nr,10)='ABC'" --iterations 10
+>
+> # Find duplicate / similar PROCEDURE blocks in a form (no VFP9 needed)
+> opencode vfp_find_duplicates --form .vfp-ai/source/forms/karty_pr_pp.sc2 --min-lines 10
+>
+> # Run any PRG in VFP9 and capture stdout/stderr/.ERR (VFP9 required)
+> opencode vfp_run_prg --prg C:\path\to\my_script.prg --workdir D:\data --timeout 120
+> ```
+
 Optimization must be evidence-based rather than stylistic.
 
 The local performance contract requires analysis of, among other things:

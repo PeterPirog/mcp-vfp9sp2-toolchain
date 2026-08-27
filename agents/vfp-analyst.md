@@ -207,6 +207,8 @@ Use the custom tools provided by `tools/vfp.ts` where available:
 - `vfp_list_tables`
 - `vfp_export_dir`
 - `vfp_audit`
+- `vfp_analyze_cdx` / `vfp_scan_cdx`
+- performance: `vfp_run_prg`, `vfp_benchmark`, `vfp_form_perf`, `vfp_count_patterns`, `vfp_find_duplicates`
 - index/CDX tools exposed by the installed tool version.
 
 If the knowledge contract describes a capability but no current tool implements it, say so explicitly. `VFP9SP2_CAPABILITY_MATRIX.md` is the implementation-gap reference.
@@ -255,5 +257,24 @@ source SHA snapshot
 -> regression/performance tests
 -> PASS/FAIL
 ```
+
+### Performance Audit Workflow
+
+1. `vfp_count_patterns` — count risky patterns project-wide (RLOCK, UNLOCK ALL, SET FILTER, SET OPTIMIZE, SET MULTILOCKS).
+2. `vfp_form_perf` — build the per-procedure performance access map for a form (operations, tables, RUSHMORE FULL/PARTIAL/NONE, suggested indexes).
+3. `vfp_benchmark` — measure critical operations BEFORE (SEEK/SCAN/CALCULATE/SUM/COUNT/SET FILTER; avg/min/max ms + SYS(3054)).
+4. `vfp_find_duplicates` — identify duplicate / similar (≥80%) PROCEDURE blocks.
+5. Refactor (see `docs/TOOLCHAIN_IMPROVEMENTS.md`).
+6. `vfp_benchmark` — measure AFTER.
+7. Compare BEFORE/AFTER (`avgMs`, `rushmore`) and report the difference. A predicted speedup must never be presented as measured.
+
+## When You Cannot Convert
+
+Some files may not produce output if:
+- The `cOutputFolder` directory doesn't exist (the driver creates it automatically in fixed versions)
+- The file is password-protected or corrupted
+- VFP9 COM host isn't installed
+
+Report these limitations to the user with the specific file paths.
 
 The source project must never be modified by the audit plane.
