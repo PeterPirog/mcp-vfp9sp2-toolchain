@@ -22,8 +22,10 @@ function loadConfig(): Record<string, any> | null {
   }
 }
 
-// Canonical exclusion list, kept in sync with config.json -> defaultExcludes
-// and vfp_common.default_excludes() (Python). Fallback if config is unreadable.
+// NOTE: vfp_detect no longer walks the filesystem here. Detection logic has a
+// single source of truth in the Python Core Service (vfp_driver.py detect ->
+// vfp_toolchain.PurePythonBackend.detect_project -> config.json).
+// excludeDirs remains only for the FoxBin2Prg project-export walk (VFP plane).
 function excludeDirs(cfg: Record<string, any> | null): string[] {
   const raw = (cfg?.defaultExcludes || ["backup", "backups", "archive"]).map((s: string) => String(s).toLowerCase())
   return raw
@@ -32,6 +34,20 @@ function excludeDirs(cfg: Record<string, any> | null): string[] {
 function isExcludedDir(item: string, cfg: Record<string, any> | null): boolean {
   if (item.startsWith(".")) return true
   return excludeDirs(cfg).includes(item.toLowerCase())
+}
+
+async function runDriver(args: string[]): Promise<any> {
+  const p = Bun.spawn([py, DRIVER, ...args], { stdout: "pipe", stderr: "pipe" })
+  const out = await new Response(p.stdout).text()
+  const err = await new Response(p.stderr).text()
+  const rc = await p.exited
+  try {
+    const data = JSON.parse(out.trim())
+    if (rc !== 0 && !data.ok) throw new Error(data.stderr || data.errors?.join("; ") || `exit ${rc}`)
+    return data
+  } catch (e) {
+    throw new Error(err || String(e))
+  }
 }
 
 function foxbin2prgDir(cfg: Record<string, any> | null): string {
@@ -57,51 +73,31 @@ function vfp9Exe(cfg: Record<string, any> | null): string | null {
 
 export const vfp_detect = tool({
   description:
-    "Detect whether a directory contains Visual FoxPro project artifacts (.scx/.vcx/.frx/.mnx/.lbx/.pjx/.dbc/.dbf, PRG/H, etc.). Returns counts per extension and whether FoxBin2Prg text cache exists.",
+    "Detect whether a directory contains Visual FoxPro project artifacts (.scx/.vcx/.frx/.mnx/.lbx/.pjx/.dbc/.dbf, PRG/H, etc.). Thin adapter: runs `vfp_driver.py detect` — the Core Service is the single source of truth for extension/exclude lists. PURE READ, no VFP required.",
   args: {
     directory: tool.schema.string().describe("Project directory to scan. Defaults to current worktree."),
   },
   async execute(args, context) {
-    const cfg = loadConfig()
     const dir = args.directory || context.worktree || process.cwd()
-    const exts = [".scx", ".vcx", ".frx", ".mnx", ".lbx", ".pjx", ".dbc", ".dbf", ".prg", ".h", ".sct", ".vct"]
-    const counts: Record<string, number> = {}
-    let total = 0
-    let cacheExists = false
+    return runDriver(["detect", "--directory", dir])
+  },
+})
 
-    async function walk(d: string) {
-      try {
-        const items = readdirSync(d)
-        for (const item of items) {
-          const full = join(d, item)
-          const stat = statSync(full)
-          if (stat.isDirectory()) {
-            if (item === ".vfp-ai" && !cacheExists) cacheExists = true
-            if (!isExcludedDir(item, cfg)) {
-              await walk(full)
-            }
-          } else {
-            if (isExcludedDir(item, cfg)) continue
-            const ext = (item.slice(-4).toLowerCase())
-            const ext3 = (item.slice(-3).toLowerCase())
-            const e = ext.startsWith(".") ? ext : "." + ext3
-            if (exts.includes(e)) {
-              counts[e] = (counts[e] || 0) + 1
-              total++
-            }
-          }
-        }
-      } catch {}
-    }
-    await walk(dir)
+export const vfp_capabilities = tool({
+  description:
+    "Core Service capability discovery: reports platform, VFP9/FoxBin2Prg/dbfbridge/DBF_Anonymizer availability and derived modes (pureRead, vfpEnhancedRead, ...). Thin adapter: runs `vfp_driver.py capabilities`. PURE READ — fast, does NOT launch VFP COM. MCP transport: not implemented yet.",
+  args: {},
+  async execute(_args, _context) {
+    return runDriver(["capabilities"])
+  },
+})
 
-    return {
-      directory: dir,
-      totalVfpFiles: total,
-      byExtension: counts,
-      cacheExists,
-      vfpDetected: total > 0 || cacheExists,
-    }
+export const vfp_anonymization_status = tool({
+  description:
+    "Read-only status of the DBF_Anonymizer subsystem: availability, pinned version, vendored commit, dbfbridge compatibility, recovery capability, privacy warnings. Thin adapter: runs `vfp_driver.py anonymization_status`. Does NOT anonymize, recover, create dictionaries or modify any DBF. Structural CDX anonymized output requires VFP9 (REINDEX on the copy).",
+  args: {},
+  async execute(_args, _context) {
+    return runDriver(["anonymization_status"])
   },
 })
 

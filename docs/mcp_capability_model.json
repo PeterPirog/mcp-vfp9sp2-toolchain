@@ -36,6 +36,7 @@
   "operations": {
     "vfp_capabilities": ["PURE_READ"],
     "vfp_detect": ["PURE_READ"],
+    "vfp_anonymization_status": ["PURE_READ"],
     "vfp_snapshot": ["PURE_READ"],
     "vfp_read_artifact": ["PURE_READ"],
     "vfp_read_table_schema": ["PURE_READ"],
