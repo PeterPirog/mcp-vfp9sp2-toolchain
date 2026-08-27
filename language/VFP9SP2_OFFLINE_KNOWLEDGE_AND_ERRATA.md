@@ -1,6 +1,6 @@
 # Visual FoxPro 9.0 SP2 — offline knowledge, errata and workaround contract
 
-This file is normative for offline operation of `vfp-integration-toolchain`.
+This file is normative for offline operation of `mcp-vfp9sp2-toolchain`.
 
 The toolchain must be able to audit, reason about, refactor and validate a VFP9 SP2 project **without Internet access at runtime**. URLs in this file are provenance only. The operational knowledge — symptoms, affected builds, detection rules, workarounds and validation requirements — is stored locally in this repository.
 

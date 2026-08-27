@@ -1,4 +1,4 @@
-# VFP Integration Toolchain
+# MCP VFP9 SP2 Toolchain
 
 Offline-first tooling for analysis, optimization and future controlled refactoring of **Microsoft Visual FoxPro 9.0 Service Pack 2** applications.
 

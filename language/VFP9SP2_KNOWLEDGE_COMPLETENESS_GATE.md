@@ -1,6 +1,6 @@
 # VFP9 SP2 knowledge completeness gate
 
-This document is a hard gate for `vfp-integration-toolchain`.
+This document is a hard gate for `mcp-vfp9sp2-toolchain`.
 
 Target dialect:
 

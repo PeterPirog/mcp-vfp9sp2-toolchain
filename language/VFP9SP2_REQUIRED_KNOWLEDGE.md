@@ -1,6 +1,6 @@
 # Visual FoxPro 9.0 SP2 — mandatory knowledge contract for the toolchain
 
-This document defines the minimum language, form, data, index and validation semantics that `vfp-integration-toolchain` must know before it can claim to perform a complete audit or safe refactoring of a Microsoft Visual FoxPro 9.0 SP2 project.
+This document defines the minimum language, form, data, index and validation semantics that `mcp-vfp9sp2-toolchain` must know before it can claim to perform a complete audit or safe refactoring of a Microsoft Visual FoxPro 9.0 SP2 project.
 
 The target dialect is:
 

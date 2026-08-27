@@ -1,4 +1,4 @@
-# MCP-ready target architecture for vfp-integration-toolchain
+# MCP-ready target architecture for mcp-vfp9sp2-toolchain
 
 Status: architectural contract. MCP transport is **not implemented yet**.
 
@@ -269,7 +269,7 @@ Useful characteristics:
 - VFP REINDEX for structural CDX output,
 - round-trip self-test.
 
-Do not duplicate this logic inside `vfp-integration-toolchain`. Integrate it through a stable adapter/service boundary.
+Do not duplicate this logic inside `mcp-vfp9sp2-toolchain`. Integrate it through a stable adapter/service boundary.
 
 ## 7. Offline dependency model
 

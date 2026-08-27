@@ -1,7 +1,7 @@
-# Implement VFP9 SP2 language subsystem in vfp-integration-toolchain
+# Implement VFP9 SP2 language subsystem in mcp-vfp9sp2-toolchain
 
 Repository:
-`https://github.com/PeterPirog/vfp-integration-toolchain`
+`https://github.com/PeterPirog/mcp-vfp9sp2-toolchain`
 
 ## Goal
 

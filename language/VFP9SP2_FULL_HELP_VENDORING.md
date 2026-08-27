@@ -2,7 +2,7 @@
 
 ## Decision
 
-`vfp-integration-toolchain` requires a complete local copy of the Visual FoxPro 9 SP2 Help source for offline analysis and code generation.
+`mcp-vfp9sp2-toolchain` requires a complete local copy of the Visual FoxPro 9 SP2 Help source for offline analysis and code generation.
 
 The canonical offline source is the VFPX HelpFile project, not live scraping of `vfphelp.com` during runtime.
 
