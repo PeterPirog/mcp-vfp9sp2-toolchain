@@ -89,31 +89,52 @@ HEURISTIC_CDX
 
 When VFP9 is available, enhanced results can verify/supersede pure-parser results without changing the public result schema.
 
-## Future MCP architecture
+## Core Service (implemented)
 
-MCP is intended to be a thin transport adapter over a transport-neutral Python service layer.
+The transport-neutral Python Core Service now exists and is used by the CLI
+and OpenCode adapters:
 
 ```text
-OpenCode / CLI today
+OpenCode / CLI (adapters)
         |
         v
-transport-neutral Python service
+src/vfp_toolchain  (Core Service — one code path, no business logic in adapters)
         |
-        +-- pure Python read/data backend
-        +-- VFP9 runtime backend
-        +-- dbfbridge data backend
-        +-- anonymization/privacy backend
-        +-- knowledge/performance/refactor services
+        +-- PurePythonBackend    (PURE_READ: detect, inventory, snapshot, config)
+        +-- DBFBridgeBackend    (vendored dbfbridge, pinned)
+        +-- DBFAnonymizerBackend (vendored DBF_Anonymizer 0.3.0, status-only in this phase)
+        +-- FoxBin2PrgBackend   (EXTERNAL_CONFIGURED, BIN2PRG-only)
+        +-- VFP9Backend         (availability checks only; no VFP launch for discovery)
         |
         v
-future MCP adapter
+future MCP adapter (ROADMAP — not implemented)
 ```
+
+Public entry points already available today:
+
+```bash
+py vfp_driver.py capabilities                       # PURE_READ, no VFP launch
+py vfp_driver.py detect --directory <path>          # PURE_READ
+py vfp_driver.py anonymization_status               # read-only privacy subsystem status
+```
+
+The OpenCode tools `vfp_capabilities`, `vfp_detect` and
+`vfp_anonymization_status` are thin adapters over these operations — detection
+logic is no longer duplicated in TypeScript.
+
+See `docs/CORE_SERVICE.md` for the service contract, result model and
+dependency pins.
+
+## Future MCP architecture
+
+MCP is intended to be a thin transport adapter over the same Core Service.
 
 Domain logic must not be duplicated inside future MCP handlers.
 
 See:
 
 - `docs/MCP_TARGET_ARCHITECTURE.md`
+- `docs/CORE_SERVICE.md`
 - `docs/mcp_capability_model.json`
 
 ## Capability classes
@@ -388,20 +409,21 @@ The existence of this architecture does not mean the current `main` already impl
 
 ## Current state
 
-The executable toolset is still primarily a read-only audit/export system.
+The executable toolset is a read-only audit/export system with a
+transport-neutral Core Service foundation (see above).
 
 High-priority remaining work includes:
 
-1. transport-neutral Python service layer,
-2. PURE READ support for all table-based VFP designer artifacts without VFP,
-3. full offline Help-derived language catalog,
-4. lexer/state-machine semantic parser,
-5. runtime language/index/DBC introspection,
-6. DBF_Anonymizer integration,
-7. complete SYS(3054)/benchmark performance subsystem,
-8. full DBC/views/CursorAdapter/application dependency audit,
-9. controlled VFP9 write/build/refactor pipeline,
-10. MCP adapter only after those service contracts stabilize.
+1. PURE READ support for all table-based VFP designer artifacts without VFP,
+2. full offline Help-derived language catalog,
+3. lexer/state-machine semantic parser,
+4. runtime language/index/DBC introspection,
+5. controlled anonymization tools over the DBF_Anonymizer adapter
+   (dependency, adapter and `vfp_anonymization_status` are in place),
+6. complete SYS(3054)/benchmark performance subsystem,
+7. full DBC/views/CursorAdapter/application dependency audit,
+8. controlled VFP9 write/build/refactor pipeline,
+9. MCP adapter only after those service contracts stabilize.
 
 See `language/VFP9SP2_CAPABILITY_MATRIX.md` for the authoritative implemented-vs-roadmap status.
 
@@ -409,6 +431,7 @@ See `language/VFP9SP2_CAPABILITY_MATRIX.md` for the authoritative implemented-vs
 
 - `docs/USAGE.md` — current CLI/OpenCode usage
 - `docs/ARTIFACTS.md` — current audit outputs
+- `docs/CORE_SERVICE.md` — transport-neutral Core Service contract (implemented)
 - `docs/MCP_TARGET_ARCHITECTURE.md` — future MCP-ready service architecture
 - `docs/mcp_capability_model.json` — machine-readable runtime capability model
 - `docs/ANONYMIZATION_INTEGRATION.md` — privacy/anonymization integration

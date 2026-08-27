@@ -50,3 +50,7 @@ dictionary.sqlite3
 *_dictionary/
 *_recovered/
 *.sqlite3
+
+# Local MCP Light Memory / OpenCode config (user-specific paths — never distribute)
+opencode.json
+

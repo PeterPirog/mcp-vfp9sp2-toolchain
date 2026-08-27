@@ -335,6 +335,13 @@ The service layer returns typed JSON-serializable results and does not print UI 
 
 Both current CLI/OpenCode tools and future MCP tools call this layer.
 
+> Implementation status (Phase 1): the foundation `src/vfp_toolchain/`
+> (`service.py`, `models.py`, `capabilities.py`, `errors.py`, `config.py`,
+> `backends/`) is implemented and used by the CLI and OpenCode adapters. The
+> service returns `OperationResult` objects, never prints, and keeps the
+> legacy `vfp_protocol` fields for backward compatibility. See
+> `docs/CORE_SERVICE.md`.
+
 ## 9. Stable operation contract
 
 Every operation returns a common envelope:

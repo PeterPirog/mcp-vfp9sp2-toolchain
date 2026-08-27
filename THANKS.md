@@ -83,6 +83,17 @@ reader (schema + non-memo data, no FPT).
 
 **Install**: `pip install dbfread` (the only runtime dependency).
 
+### DBF_Anonymizer (pinned, vendored)
+
+- **`DBF_Anonymizer`** — https://github.com/PeterPirog/DBF_Anonymizer — v0.3.0,
+  vendored frozen snapshot under `tools/dbf_anonymizer/` (see
+  `tools/dbf_anonymizer/VERSION.txt`). MIT per the upstream `pyproject.toml` at the
+  pinned commit (`ed7915497862850c3de650f2c50c86569442ff77`). Loaded from the repo;
+  not pip-installed, never downloaded at runtime.
+- Depends on `dbfbridge` pinned to `addbadb9281914661bf742924f45039e46a895cd` —
+  the same vendored snapshot this toolchain already ships, so there is a single
+  shared dbfbridge. See `tools/VENDORED_DEPENDENCIES.json`.
+
 ### Thank you
 
 Thank you to the **dbfread** project (elixir-dbf) for the streaming DBF/FPT reader that
