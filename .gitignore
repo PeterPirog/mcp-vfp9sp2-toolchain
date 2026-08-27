@@ -44,6 +44,9 @@ Prompt build VFP 9.0  Translator.txt
 # Local audit outputs (never commit real project audits)
 audit_report/
 
+# Offline bundle build output (maintainer artifact, never committed — Phase 18)
+dist/
+
 # Sensitive anonymization artifacts (DBF_Anonymizer) — NEVER commit
 dictionary.sqlite3
 *_dict/
