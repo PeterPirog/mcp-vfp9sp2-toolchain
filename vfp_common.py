@@ -83,9 +83,9 @@ def foxbin2prg_program():
     return os.path.join(d, program_file)
 
 
-# Companion text/memo files that FoxBin2Prg (VFP9 COM) expects to exist NEXT TO
-# a binary before it will convert it (real-run report #1: "Error 41, missing
-# companion file"). Keyed by the binary extension.
+# Binary companion/memo files that belong next to the primary VFP artifact.
+# IMPORTANT: .lb2 is FoxBin2Prg's text representation of a label; the binary
+# Label Designer companion of .lbx is .lbt.
 COMPANIONS = {
     ".scx": (".sct",),
     ".vcx": (".vct",),
@@ -93,7 +93,7 @@ COMPANIONS = {
     ".mnx": (".mnt",),
     ".pjx": (".pjt",),
     ".dbf": (".fpt",),
-    ".lbx": (".lb2",),
+    ".lbx": (".lbt",),
     ".dbc": (".dcx", ".dct"),
 }
 
