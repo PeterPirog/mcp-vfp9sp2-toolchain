@@ -1,0 +1,95 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "domain": "indexes-rushmore",
+  "indexFamilies": {
+    "structuralCdx": {
+      "description": "Compound structural index associated with a DBF table; can contain multiple tags.",
+      "mustDetect": true,
+      "autoOpenWithTable": true
+    },
+    "standaloneIdx": {
+      "description": "Standalone single-index file handled separately from structural CDX.",
+      "mustDetect": true
+    }
+  },
+  "indexCommand": {
+    "canonicalSyntax": "INDEX ON eExpression TO IDXFileName | TAG TagName [BINARY] [COLLATE cCollateSequence] [OF CDXFileName] [FOR lExpression] [COMPACT] [ASCENDING | DESCENDING] [UNIQUE | CANDIDATE] [ADDITIVE]",
+    "tagTypes": {
+      "regular": "duplicates allowed",
+      "unique": "keeps first duplicate key in the index; not a relational uniqueness constraint",
+      "candidate": "duplicate key values are not allowed"
+    },
+    "primaryCreatedByIndexCommand": false,
+    "filteredIndexHasSeparateForExpression": true,
+    "collationAffectsOrdering": true
+  },
+  "runtimeIntrospection": {
+    "preferredWhenVfpAvailable": true,
+    "functions": ["TAG()", "TAGNO()", "TAGCOUNT()", "KEY()", "SYS(14)", "FOR()", "SYS(2021)", "ORDER()", "CANDIDATE()", "PRIMARY()", "IDXCOLLATE()", "CDX()", "NDX()"],
+    "keyExpression": ["KEY()", "SYS(14)"],
+    "filterExpression": ["FOR()", "SYS(2021)"],
+    "binaryCdxParsingConfidence": "HEURISTIC unless confirmed by VFP runtime"
+  },
+  "keyDesign": {
+    "variableLengthKeysSupported": false,
+    "compositeKeysRequireTypeAwareEncoding": true,
+    "hazards": [
+      "character numeric values sort lexicographically",
+      "incorrect concatenation of numeric/date/logical values can change ordering",
+      "nullable expressions require deliberate handling",
+      "collation can change key byte width and sort behavior",
+      "functions in key expressions must be deterministic"
+    ]
+  },
+  "seekSemantics": {
+    "distinctConstructs": ["SEEK command", "SEEK() function", "INDEXSEEK() function"],
+    "dependsOnActiveOrderOrExplicitTag": true,
+    "preserveRecordPointerSemantics": true,
+    "preserveFoundEofSemantics": true
+  },
+  "rushmore": {
+    "mustAnalyzeSqlAndXbase": true,
+    "candidateClauses": ["WHERE", "JOIN ON", "FOR", "SCAN FOR", "LOCATE FOR", "COUNT FOR", "CALCULATE FOR", "SUM FOR", "REPLACE FOR"],
+    "runtimeEvidence": {
+      "setOptimize": "SET OPTIMIZE ON",
+      "sys3054Modes": {
+        "1": "filter showplan",
+        "11": "join showplan",
+        "2": "filter + SQL text",
+        "12": "join + SQL text"
+      }
+    },
+    "statuses": ["FULL", "PARTIAL", "NONE", "UNKNOWN"],
+    "mustRecordUsedTags": true,
+    "exactExpressionMatchingRequired": true,
+    "normalizedExpressionAstRequired": true
+  },
+  "filteredIndex": {
+    "keyAndForMustBeSeparate": true,
+    "keyFunctions": ["KEY()", "SYS(14)"],
+    "filterFunctions": ["FOR()", "SYS(2021)"]
+  },
+  "scanMutationHazards": {
+    "mustDetectChangingControllingKey": true,
+    "mustDetectChangingFilteredForFields": true,
+    "mustDetectChangingRelationKeys": true
+  },
+  "destructiveCommands": ["INDEX ON", "REINDEX", "DELETE TAG", "PACK", "ZAP", "ALTER TABLE"],
+  "auditPolicy": {
+    "neverRunDestructiveCommandsOnSource": true,
+    "indexExperimentsRequireCopiedFixtures": true,
+    "doNotClaimFullRushmoreWithoutRuntimeEvidence": true,
+    "doNotRecommendFunctionalTagWithoutTypeCheckAndBenchmark": true
+  },
+  "references": [
+    "https://www.vfphelp.com/vfp9/html/242d1feb-d43e-4831-9e4b-d0bb0b5fe4ae.htm",
+    "https://www.vfphelp.com/help/html/c97ab80a-f978-4944-87bd-2f0dceb44227.htm",
+    "https://www.vfphelp.com/help/html/f256f6d2-b03f-41cb-af88-4fb4dce1dc9d.htm",
+    "https://www.vfphelp.com/help/_5wn12psmx.htm",
+    "https://www.vfphelp.com/help/html/02242895-0cc5-49dc-9197-d5c2db283aa3.htm",
+    "https://vfphelp.com/vfp9/html/a91f4661-0f12-4f4a-bb53-63725672a299.htm",
+    "https://www.vfphelp.com/help/html/400a0198-cac5-4abd-8e2d-79564a75742d.htm",
+    "https://github.com/VFPX/HelpFile"
+  ]
+}
