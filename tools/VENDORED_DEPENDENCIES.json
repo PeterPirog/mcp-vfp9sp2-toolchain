@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "note": "Machine-readable offline dependency manifest. Runtime NEVER downloads anything listed here; updates are a maintainer/development operation only.",
+  "dependencies": [
+    {
+      "name": "dbfbridge",
+      "upstream": "https://github.com/PeterPirog/dbfbridge",
+      "commit": "addbadb9281914661bf742924f45039e46a895cd",
+      "version": "0.1.0",
+      "license": "MIT",
+      "mode": "VENDORED",
+      "location": "tools/dbfbridge",
+      "provenance": "tools/dbfbridge/VERSION.txt",
+      "runtimeNetworkRequired": false
+    },
+    {
+      "name": "DBF_Anonymizer",
+      "upstream": "https://github.com/PeterPirog/DBF_Anonymizer",
+      "commit": "ed7915497862850c3de650f2c50c86569442ff77",
+      "version": "0.3.0",
+      "license": "MIT (declared in upstream pyproject.toml at the pinned commit; the upstream repo at that commit contains no LICENSE file)",
+      "mode": "VENDORED",
+      "location": "tools/dbf_anonymizer",
+      "provenance": "tools/dbf_anonymizer/VERSION.txt",
+      "runtimeNetworkRequired": false,
+      "requires": {
+        "name": "dbfbridge",
+        "commit": "addbadb9281914661bf742924f45039e46a895cd"
+      },
+      "notes": "Vendored runtime package only (dbf_anonymizer/). Uses the SAME vendored dbfbridge snapshot — never a second copy."
+    },
+    {
+      "name": "FoxBin2Prg",
+      "upstream": "https://github.com/fdbozzo/foxbin2prg",
+      "commit": "32715d06b84753401b7262c3cc48bde758ee3c8d (reference baseline at task preparation; not vendored)",
+      "version": "1.21.05 (upstream README at reference baseline)",
+      "license": "Creative Commons Attribution 4.0",
+      "mode": "EXTERNAL_CONFIGURED",
+      "location": "resolved via VFP_FOXBIN2PRG_DIR or config.json foxbin2prg.directoryDefault (runtime source NOT in this repository)",
+      "provenance": "config.json -> foxbin2prg",
+      "runtimeNetworkRequired": false,
+      "notes": "Runtime source is NOT vendored in this repo, therefore mode is EXTERNAL_CONFIGURED, not VENDORED."
+    }
+  ]
+}
