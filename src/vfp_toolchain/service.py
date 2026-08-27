@@ -33,8 +33,12 @@ from .errors import (
     EC_ANON_DICTIONARY_SENSITIVE,
     EC_ANONYMIZER_NOT_AVAILABLE,
     EC_CDX_REBUILD_REQUIRES_VFP9,
+    EC_CONFIG_ERROR,
     EC_DEPENDENCY_NOT_AVAILABLE,
+    EC_DEPENDENCY_PARTIAL,
+    EC_DEPENDENCY_VERSION_MISMATCH,
     EC_FOXBIN2PRG_NOT_AVAILABLE,
+    EC_KNOWLEDGE_INCOMPLETE,
     EC_VFP9_NOT_INSTALLED,
 )
 from .models import OperationResult
@@ -61,6 +65,15 @@ class VFPToolchainService(object):
         Must work on a machine without VFP9, FoxBin2Prg, COM, OpenCode or
         Bun. Deliberately does NOT launch VFP or run verno (exact version
         verification is a separate, later operation).
+
+        Semantics contract:
+          errors  = real execution failures of the discovery operation itself
+                    (e.g. corrupt config.json, unverifiable vendored pins);
+          warnings = limited / optionally-missing capabilities (VFP9 absent,
+                    FoxBin2Prg not configured, anonymizer unavailable, ...);
+          data    = the raw state of each component.
+        An optional backend being absent on a PURE_READ host is a warning,
+        never an error.
         """
         requires = list(OPERATION_CAPABILITIES.get("vfp_capabilities",
                                                    (Capability.PURE_READ.value,)))
@@ -68,62 +81,89 @@ class VFPToolchainService(object):
         warnings = []
         errors = []
 
-        data["target"] = config.target_dialect()
+        # Load config once; a corrupt file is a real discovery problem ->
+        # PARTIAL. A missing file is legitimate on a bare host (not an error).
+        cfg = config.load_config(self._root)
+        cfg_error = config.config_error(self._root)
+        if cfg_error:
+            errors.append(EC_CONFIG_ERROR + ": " + cfg_error)
+
+        data["target"] = cfg.get("target", {}).get("dialect",
+                             "microsoft.visual-foxpro.9.0.sp2")
         data["platform"] = {
             "os": os.name,
             "pythonVersion": platform.python_version(),
         }
         data["mcp"] = {"implemented": False}  # README/config contract
 
-        # VFP9 (cheap existence checks only)
+        # VFP9 (cheap existence checks only) — optional for PURE_READ.
         from .backends import VFP9Backend
-        v9 = VFP9Backend().status()
+        v9 = VFP9Backend(root=self._root).status()
+        v9_exists = bool(v9.get("executableExists", False))
         data["vfp9"] = {
             "configured": v9.get("configured", False),
-            "executableExists": v9.get("executableExists", False),
+            "executableExists": v9_exists,
             "versionVerified": False,
         }
-        if v9.get("configured") and not v9.get("executableExists"):
-            errors.append(EC_VFP9_NOT_INSTALLED + ": configured path does not exist")
+        if not v9_exists:
+            warnings.append(EC_VFP9_NOT_INSTALLED +
+                            ": VFP9 not installed — VFP_READ_ENHANCED and "
+                            "workspace/build modes unavailable on this host")
 
-        # FoxBin2Prg (EXTERNAL_CONFIGURED)
+        # FoxBin2Prg (EXTERNAL_CONFIGURED) — prerequisite for BIN2PRG
+        # conversion operations only, NOT for VFP_READ_ENHANCED in general.
         from .backends import FoxBin2PrgBackend
-        fb = FoxBin2PrgBackend().status()
+        fb = FoxBin2PrgBackend(root=self._root).status()
+        fb_program = bool(fb.get("programExists", False))
         data["foxbin2prg"] = {
             "configured": fb.get("configured", False),
-            "available": fb.get("programExists", False),
+            "programExists": fb_program,
+            "available": fb_program and v9_exists,  # conversion needs VFP9 too
+            "usableForConversion": fb_program and v9_exists,
             "vendored": fb.get("vendored", False),
             "mode": fb.get("mode", "EXTERNAL_CONFIGURED"),
         }
-        if not fb.get("programExists", False):
+        if not fb_program:
             warnings.append(EC_FOXBIN2PRG_NOT_AVAILABLE +
-                            ": set VFP_FOXBIN2PRG_DIR to a FoxBin2Prg installation")
+                            ": set VFP_FOXBIN2PRG_DIR to a FoxBin2Prg "
+                            "installation (BIN2PRG conversion unavailable)")
 
         # dbfbridge (VENDORED)
         from .backends import DBFBridgeBackend
-        db = DBFBridgeBackend().status()
+        db = DBFBridgeBackend(root=self._root).status()
         data["dbfbridge"] = {
             "available": db.get("available", False),
             "vendored": db.get("vendored", False),
             "version": db.get("version"),
+            "pinVerified": db.get("pinVerified", False),
+            "moduleOriginVerified": db.get("moduleOriginVerified", False),
         }
         if not db.get("available", False):
-            errors.append(EC_DEPENDENCY_NOT_AVAILABLE + ": dbfbridge snapshot unavailable")
+            if not db.get("pinVerified", False):
+                errors.append(EC_DEPENDENCY_VERSION_MISMATCH +
+                              ": dbfbridge vendored pin does not match the "
+                              "expected upstream commit")
+            else:
+                errors.append(EC_DEPENDENCY_NOT_AVAILABLE +
+                              ": dbfbridge snapshot unavailable")
 
         # DBF_Anonymizer (VENDORED, status-only in this phase)
         from .backends import DBFAnonymizerBackend
-        an = DBFAnonymizerBackend().status()
+        an = DBFAnonymizerBackend(root=self._root).status()
         data["dbfAnonymizer"] = {
             "available": an.get("available", False),
             "vendored": an.get("vendored", False),
             "version": an.get("version"),
+            "pinVerified": an.get("pinVerified", False),
+            "moduleOriginVerified": an.get("moduleOriginVerified", False),
+            "dbfbridgeCompatible": an.get("dbfbridgeCompatible", False),
         }
         if not an.get("available", False):
             errors.append(EC_ANONYMIZER_NOT_AVAILABLE +
-                          ": vendored snapshot unavailable or version mismatch")
+                          ": vendored snapshot unavailable (pin, version or "
+                          "dbfbridge compatibility not verified)")
 
         # Knowledge (offline contract)
-        cfg = config.load_config()
         k = cfg.get("knowledge") or {}
         data["knowledge"] = {
             "offlineRequired": bool(k.get("offlineRequired", True)),
@@ -131,33 +171,54 @@ class VFPToolchainService(object):
                             "DOMAIN_READY_EXACT_LANGUAGE_CATALOG_INCOMPLETE"),
         }
         if "INCOMPLETE" in str(data["knowledge"].get("status", "")).upper():
-            warnings.append("knowledge gate is NOT complete: "
+            warnings.append(EC_KNOWLEDGE_INCOMPLETE + ": "
                             + str(data["knowledge"].get("status")))
 
-        # Derived mode availability (single source: backends above)
+        # Derived mode availability.
+        # vfpEnhancedRead (VFP_READ_ENHANCED) == VFP9 runtime present. It does
+        # NOT depend on FoxBin2Prg: runtime inventory, SYS(3054) profiling and
+        # snippet validation need only the VFP9 runtime.
         modes = {
             "pureRead": True,
             "pureWriteCopy": bool(db.get("available", False)),
-            "vfpEnhancedRead": bool(v9.get("executableExists", False)
-                                    and fb.get("programExists", False)),
-            "workspaceWrite": False,   # roadmap (write plane not yet exposed)
-            "buildValidate": False,    # roadmap
+            "vfpEnhancedRead": v9_exists,
+            "workspaceWrite": False,
+            "buildValidate": False,
         }
         data["modes"] = modes
+        data["backendAvailability"] = {
+            "PURE_PYTHON": True,
+            "DBFBRIDGE": bool(db.get("available", False)),
+            "DBF_ANONYMIZER": bool(an.get("available", False)),
+            "FOXBIN2PRG": bool(fb_program and v9_exists),
+            "VFP9_RUNTIME": v9_exists,
+        }
 
-        ok = modes["pureRead"]
-        return OperationResult(
-            ok=ok,
-            status="PASS" if ok else "FAIL",
-            errorCode=None,
-            operation="vfp_capabilities",
-            requires=requires,
+        metadata = {"version": _TOOLCHAIN_VERSION}  # type: dict
+        metadata["modesReason"] = {
+            "workspaceWrite": "not yet exposed through the Core Service "
+                              "(legacy refactor plane exists but is not "
+                              "routed here yet)",
+            "buildValidate": "not yet exposed through the Core Service "
+                             "(legacy compile/round-trip plane exists but "
+                             "is not routed here yet)",
+        }
+
+        # Discovery that completed with only optional backends missing is a
+        # PASS. A real discovery failure (config error / unverifiable pins)
+        # is a controlled PARTIAL with an explicit domain code.
+        if errors:
+            return OperationResult.partial(
+                EC_DEPENDENCY_PARTIAL,
+                operation="vfp_capabilities", requires=requires,
+                backend=BACKEND_PURE_PYTHON,
+                data=data, warnings=warnings, errors=errors,
+                metadata=metadata,
+            )
+        return OperationResult.success(
+            operation="vfp_capabilities", requires=requires,
             backend=BACKEND_PURE_PYTHON,
-            sourceModified=False,
-            data=data,
-            warnings=warnings,
-            errors=errors,
-            metadata={"version": _TOOLCHAIN_VERSION},
+            data=data, warnings=warnings, metadata=metadata,
         )
 
     # -- project detection (PURE_READ) --------------------------------------
@@ -217,7 +278,7 @@ class VFPToolchainService(object):
         """
         requires = [Capability.PURE_READ.value]
         from .backends import DBFAnonymizerBackend
-        be = DBFAnonymizerBackend()
+        be = DBFAnonymizerBackend(root=self._root)
         meta = be.status()
         warnings = []
         errors = []
@@ -229,12 +290,19 @@ class VFPToolchainService(object):
         warnings.append(
             EC_CDX_REBUILD_REQUIRES_VFP9 + ": structural CDX output after "
             "changed indexed values requires VFP9 REINDEX on the copy")
+        error_code = EC_ANONYMIZER_NOT_AVAILABLE
         if not meta.get("dbfbridgeCompatible", False):
+            error_code = EC_DEPENDENCY_VERSION_MISMATCH
             errors.append("dbfbridge snapshot pin mismatch — anonymizer "
                           "requires dbfbridge @ "
                           + meta.get("dbfbridgeRequiredCommit", "pinned commit"))
+        elif not meta.get("pinVerified", False):
+            error_code = EC_DEPENDENCY_VERSION_MISMATCH
+            errors.append("anonymizer VERSION.txt commit does not match the "
+                          "expected pinned commit")
         if not meta.get("available", False):
-            errors.append(meta.get("error") or EC_ANONYMIZER_NOT_AVAILABLE)
+            if meta.get("error"):
+                errors.append(str(meta["error"]))
 
         data = {
             "available": bool(meta.get("available", False)),
@@ -249,17 +317,21 @@ class VFPToolchainService(object):
             "productionAnonymizationExposed": False,  # next phase
             "publicApi": meta.get("publicApi"),
         }
-        return OperationResult(
-            ok=data["available"],
-            status="PASS" if data["available"] else "FAIL",
-            errorCode=None if data["available"] else EC_ANONYMIZER_NOT_AVAILABLE,
+        # An availability query that completed and reports the subsystem as
+        # unavailable is a controlled PARTIAL (explained, domain-coded) —
+        # not an unexplained FAIL and never UNEXPECTED_ERROR.
+        if data["available"]:
+            return OperationResult.success(
+                operation="vfp_anonymization_status",
+                requires=requires, backend=BACKEND_DBF_ANONYMIZER,
+                data=data, warnings=warnings,
+                metadata={"version": _TOOLCHAIN_VERSION},
+            )
+        return OperationResult.partial(
+            error_code,
             operation="vfp_anonymization_status",
-            requires=requires,
-            backend=BACKEND_DBF_ANONYMIZER,
-            sourceModified=False,
-            data=data,
-            warnings=warnings,
-            errors=errors,
+            requires=requires, backend=BACKEND_DBF_ANONYMIZER,
+            data=data, warnings=warnings, errors=errors,
             metadata={"version": _TOOLCHAIN_VERSION},
         )
 

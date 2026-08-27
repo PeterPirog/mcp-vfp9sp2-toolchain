@@ -15,33 +15,56 @@ import json
 import os
 
 
-def repo_root():
-    """Absolute path of the repository root (parent of src/)."""
+def repo_root(override=None):
+    """Absolute path of the repository root (parent of src/).
+
+    ``override`` (optional) lets tests / future per-project sessions point the
+    whole resolver at a different root. No side effects.
+    """
+    if override:
+        return os.path.abspath(override)
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def config_path():
+def config_path(override_root=None):
     """Absolute path to config.json."""
-    return os.path.join(repo_root(), "config.json")
+    return os.path.join(repo_root(override_root), "config.json")
 
 
-def load_config():
-    """Parse config.json. Returns {} on any error (read-only, fail-soft)."""
-    path = config_path()
+# Read-only, per-root record of the most recent config load problem (or None).
+_last_error = {}
+
+
+def load_config(override_root=None):
+    """Parse config.json. Returns {} on any error (read-only, fail-soft).
+
+    If the file is present but unparseable, the caller is told via
+    ``config_error()`` so a corrupt config can be surfaced as PARTIAL instead
+    of silently falling back.
+    """
+    key = override_root or "_default"
+    path = config_path(override_root)
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+        _last_error[key] = None
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError) as e:
+        _last_error[key] = str(e)
         return {}
 
 
-def target_dialect():
-    cfg = load_config()
+def config_error(override_root=None):
+    """Last config load error for a root (None = no error / not loaded)."""
+    return _last_error.get(override_root or "_default")
+
+
+def target_dialect(override_root=None):
+    cfg = load_config(override_root)
     return (cfg.get("target") or {}).get("dialect", "microsoft.visual-foxpro.9.0.sp2")
 
 
-def vfp_exe_candidate():
+def vfp_exe_candidate(override_root=None):
     """Resolve the configured VFP9 executable path (existence NOT checked).
 
     Precedence (mirrors vfp_driver._vfp9_exe):
@@ -50,7 +73,7 @@ def vfp_exe_candidate():
       3. config.vfp.exeDefault
       4. documented default location
     """
-    cfg = load_config()
+    cfg = load_config(override_root)
     v = cfg.get("vfp") or {}
     env_name = v.get("exeEnvironmentVariable", "VFP9_EXE")
     exe = os.environ.get(env_name)
@@ -60,31 +83,31 @@ def vfp_exe_candidate():
     return exe
 
 
-def foxbin2prg_program():
+def foxbin2prg_program(override_root=None):
     """Resolve the configured foxbin2prg.prg path (existence NOT checked)."""
-    cfg = load_config()
+    cfg = load_config(override_root)
     fb = cfg.get("foxbin2prg") or {}
     program_file = fb.get("programFile") or "foxbin2prg.prg"
     d = os.environ.get(fb.get("directoryEnvironmentVariable", "VFP_FOXBIN2PRG_DIR"))
     if not d:
         d = fb.get("directoryDefault") or os.path.join("tools", "foxbin2prg")
     if not os.path.isabs(d):
-        d = os.path.normpath(os.path.join(repo_root(), d))
+        d = os.path.normpath(os.path.join(repo_root(override_root), d))
     return os.path.join(d, program_file)
 
 
-def dbfbridge_vendored_dir():
-    cfg = load_config()
+def dbfbridge_vendored_dir(override_root=None):
+    cfg = load_config(override_root)
     db = cfg.get("dbfbridge") or {}
     d = db.get("directory") or os.path.join("tools", "dbfbridge")
     if not os.path.isabs(d):
-        d = os.path.normpath(os.path.join(repo_root(), d))
+        d = os.path.normpath(os.path.join(repo_root(override_root), d))
     return d
 
 
-def default_excludes():
+def default_excludes(override_root=None):
     """Canonical directory exclusion list (lowercase names), from config.json."""
-    cfg = load_config()
+    cfg = load_config(override_root)
     raw = cfg.get("defaultExcludes") or []
     items = tuple((x or "").strip().lower() for x in raw if x and str(x).strip())
     return items or (
@@ -93,9 +116,9 @@ def default_excludes():
     )
 
 
-def detect_extensions():
+def detect_extensions(override_root=None):
     """Canonical VFP artifact detection extensions (config.artifacts.detect)."""
-    cfg = load_config()
+    cfg = load_config(override_root)
     arts = cfg.get("artifacts") or {}
     raw = arts.get("detect") or []
     exts = []

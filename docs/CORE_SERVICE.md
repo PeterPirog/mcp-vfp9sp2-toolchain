@@ -105,6 +105,65 @@ DBF_Anonymizer 0.3.0 declares exactly the same dbfbridge commit the toolchain
 vendors — one shared dbfbridge, never two. The runtime never downloads any of
 these; updates are a maintainer operation.
 
+> **OFFLINE_DEPENDENCY_CLOSURE = NEXT PHASE.** The vendored dbfbridge snapshot
+> still imports the third-party `dbfread` package (installed via pip), so the
+> dependency closure is not yet fully offline. Closing that gap — vendoring
+> `dbfread` (or removing the import) plus a SHA256 manifest per snapshot — is
+> the next phase, not part of PR8.
+
+**License/provenance.** dbfbridge ships its upstream `LICENSE` in the vendored
+copy. The DBF_Anonymizer upstream repo has no LICENSE file at the pinned
+commit — MIT is declared in upstream `pyproject.toml` — so the canonical
+license statement for that snapshot is `tools/dbf_anonymizer/NOTICE.md`.
+
+## Fail-closed provenance verification
+
+`backends/verify.py` defines two independent checks; a vendored dependency is
+`available == True` **only if all checks pass**:
+
+1. **`pinVerified`** — the commit recorded in the dependency's `VERSION.txt`
+   must equal the architecturally pinned commit (short-SHA prefixes ≥ 7 chars
+   are accepted, git convention; empty values fail closed). A `VERSION.txt`
+   existing at all is NOT evidence of compatibility — the recorded value must
+   actually agree with the expected pin.
+2. **`moduleOriginVerified`** — after import, the package `__file__` must
+   resolve to a path under the expected vendored root. This detects a
+   globally installed or shadow copy that won over the vendored snapshot.
+   The probe reports the conflict; it never mutates `sys.modules`.
+
+For DBF_Anonymizer, `available` additionally requires `version == 0.3.0`,
+the full public API, and `dbfbridgeCompatible` (the shared vendored dbfbridge
+pins the commit the anonymizer requires). Any mismatch → `available: false`,
+never assumed from the presence of a file.
+
+## Result semantics: PASS / PARTIAL / FAIL
+
+- **PASS** — the operation completed; optional backends may be absent, and
+  that is reported in `warnings` (e.g. `VFP9_NOT_INSTALLED`,
+  `FOXBIN2PRG_NOT_AVAILABLE`) — an optional runtime being absent on a
+  PURE_READ host is a warning, never an error.
+- **PARTIAL** — a controlled, explained outcome. `OperationResult.partial()`
+  REQUIRES an explicit machine-readable domain `errorCode`
+  (`DEPENDENCY_PARTIAL`, `DEPENDENCY_VERSION_MISMATCH`, `CONFIG_ERROR`,
+  …) and raises `ValueError` if it is missing. A PARTIAL is therefore never
+  mistaken for an unexplained `UNEXPECTED_ERROR`.
+- **FAIL** — a hard failure of the requested operation. A FAIL without an
+  explicit code defaults to `UNEXPECTED_ERROR` — reserved for genuine,
+  unexplained failures, never for controlled partials.
+- **`vfp_anonymization_status`** reports subsystem unavailability as PARTIAL
+  with the specific domain code (pin mismatch → `DEPENDENCY_VERSION_MISMATCH`,
+  otherwise `ANONYMIZER_NOT_AVAILABLE`) — the status query itself succeeded.
+
+## Capability semantics
+
+`vfpEnhancedRead` (VFP_READ_ENHANCED) means **VFP9 runtime present** —
+runtime inventory, SYS(3054) profiling and snippet validation need only the
+VFP9 executable. It does **not** depend on FoxBin2Prg. FoxBin2Prg is
+`EXTERNAL_CONFIGURED` and is a prerequisite for BIN2PRG conversion
+operations only (reported as `foxbin2prg.usableForConversion`).
+`workspaceWrite` / `buildValidate` remain `false` (roadmap, not yet routed
+through the Core Service).
+
 ## VFP-enhanced backend (VFP9 + FoxBin2Prg)
 
 `VFP9Backend` exposes cheap availability checks only

@@ -48,7 +48,11 @@ class OperationResult(object):
             status = STATUS_PASS if ok else STATUS_FAIL
         if status not in STATUS_VALUES:
             raise ValueError("invalid status: %r" % (status,))
-        if not ok and errorCode is None:
+        # UNEXPECTED_ERROR is reserved for a genuine, unexplained FAIL.
+        # A controlled PARTIAL is a normal outcome and must carry an explicit
+        # domain error code (see the partial() factory) — it must NEVER be
+        # auto-labelled UNEXPECTED_ERROR.
+        if not ok and errorCode is None and status == STATUS_FAIL:
             errorCode = "UNEXPECTED_ERROR"
         self.ok = bool(ok)
         self.status = status
@@ -90,9 +94,25 @@ class OperationResult(object):
                    errors=errs, metadata=metadata, **base)
 
     @classmethod
-    def partial(cls, operation=None, requires=None, backend=None,
+    def partial(cls, errorCode, operation=None, requires=None, backend=None,
                 data=None, warnings=None, errors=None, metadata=None, **base):
-        return cls(ok=False, status=STATUS_PARTIAL, errorCode=None,
+        """Build a controlled PARTIAL result.
+
+        A PARTIAL is a legitimate, explained outcome (e.g. a partial audit,
+        a partial conversion, a partial index analysis). It therefore MUST
+        carry an explicit machine-readable domain code describing WHY the
+        result is partial. Requiring the argument keeps callers from shipping
+        an unexplained PARTIAL, and guarantees a PARTIAL is never mistaken
+        for an unexplained UNEXPECTED_ERROR.
+
+        Suggested domain codes: CONVERSION_PARTIAL, AUDIT_PARTIAL,
+        DEPENDENCY_PARTIAL, INDEX_ANALYSIS_PARTIAL.
+        """
+        if not errorCode or not str(errorCode).strip():
+            raise ValueError("a PARTIAL result requires an explicit domain "
+                             "errorCode (e.g. CONVERSION_PARTIAL); it must not "
+                             "be left blank or labelled UNEXPECTED_ERROR")
+        return cls(ok=False, status=STATUS_PARTIAL, errorCode=errorCode,
                    operation=operation, requires=requires, backend=backend,
                    data=data, warnings=warnings, errors=errors,
                    metadata=metadata, **base)

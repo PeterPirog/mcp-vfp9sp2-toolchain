@@ -31,16 +31,20 @@ class VFP9Backend(object):
     name = "vfp9"
     backend = BACKEND_VFP9_RUNTIME
 
+    def __init__(self, root=None):
+        # root: optional repository-root override (tests / per-project later).
+        self._root = root
+
     def configured(self):
         """True when a VFP9 executable path is resolvable from config/env."""
         try:
-            return bool(config.vfp_exe_candidate())
+            return bool(config.vfp_exe_candidate(self._root))
         except Exception:
             return False
 
     def executable_exists(self):
         """True when the configured vfp9.exe exists on disk."""
-        path = config.vfp_exe_candidate()
+        path = config.vfp_exe_candidate(self._root)
         return bool(path) and os.path.isfile(path)
 
     def enhanced_backend_available(self):
@@ -49,13 +53,13 @@ class VFP9Backend(object):
             return False
         try:
             from .foxbin2prg_backend import FoxBin2PrgBackend
-            return FoxBin2PrgBackend().program_exists()
+            return FoxBin2PrgBackend(root=self._root).program_exists()
         except Exception:
             return False
 
     def status(self):
         """Read-only availability report (does not launch VFP)."""
-        exe = config.vfp_exe_candidate()
+        exe = config.vfp_exe_candidate(self._root)
         exists = self.executable_exists()
         return {
             "configured": self.configured(),

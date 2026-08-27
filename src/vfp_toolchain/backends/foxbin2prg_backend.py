@@ -27,9 +27,13 @@ class FoxBin2PrgBackend(object):
     name = "foxbin2prg"
     backend = BACKEND_FOXBIN2PRG
 
+    def __init__(self, root=None):
+        # root: optional repository-root override (tests / per-project later).
+        self._root = root
+
     def configured_path(self):
         """Resolved foxbin2prg.prg path per the existing contract."""
-        return config.foxbin2prg_program()
+        return config.foxbin2prg_program(self._root)
 
     def program_exists(self):
         return os.path.isfile(self.configured_path())
@@ -40,7 +44,8 @@ class FoxBin2PrgBackend(object):
         Capability discovery is deliberately cheap: it does NOT launch VFP.
         The authoritative version check stays in vfp_driver `verno`.
         """
-        vfp9 = VFP9Backend()
+        from .vfp9_backend import VFP9Backend
+        vfp9 = VFP9Backend(root=self._root)
         return self.program_exists() and vfp9.executable_exists()
 
     def status(self):
@@ -57,12 +62,6 @@ class FoxBin2PrgBackend(object):
             "vfpRequired": True,
         }
         return meta
-
-
-def VFP9Backend():
-    """Lazy import to avoid a circular import at module load time."""
-    from .vfp9_backend import VFP9Backend as _V9
-    return _V9()
 
 
 __all__ = ["FoxBin2PrgBackend", "UPSTREAM", "SOURCE_DIRECTION"]
