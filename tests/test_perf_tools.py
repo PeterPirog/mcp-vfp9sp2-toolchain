@@ -197,11 +197,47 @@ def test_run_prg_missing_file():
     assert res["ok"] is False
 
 
+def test_run_prg_error_fields_present(tmp_path):
+    """run_prg data payload must carry errFile/errContent/hung keys."""
+    fp = str(tmp_path / "fake.prg")
+    with open(fp, "w") as f:
+        f.write("? 'x'\nQUIT\n")
+    res = _call_capture(vfp_driver.run_run_prg, fp, timeout=3)
+    data = res["payload"]["data"]
+    for key in ("errFile", "errContent", "hung", "durationMs"):
+        assert key in data, "missing %r in data: %s" % (key, data)
+
+
 def test_benchmark_missing_dane(tmp_path):
     """benchmark without a Dane/ directory must return ok=False (no crash)."""
     res = _call_capture(vfp_driver.run_benchmark, str(tmp_path), "t",
                         "count_for")
     assert res["ok"] is False
+
+
+def test_benchmark_generated_prg_uses_legal_vfp(tmp_path):
+    """The generated benchmark PRG must avoid syntax proven illegal in VFP9
+    (LOCAL with initializer, SET SYS, SET DEVICE TO FILE)."""
+    dane = tmp_path / "Dane"
+    dane.mkdir()
+    (tmp_path / ".vfp-ai").mkdir()
+    res = _call_capture(vfp_driver.run_benchmark, str(tmp_path), "tbl",
+                        "count_for", expression="X > 1", iterations=3, timeout=5)
+    # VFP9 absent on most CI machines — must fail cleanly, but the PRG is
+    # generated BEFORE the VFP9 check, so inspect it.
+    prg = tmp_path / ".vfp-ai" / "benchmarks" / "benchmark_temp.prg"
+    assert prg.is_file(), "benchmark PRG not generated"
+    text = prg.read_text(encoding="cp1252")
+    assert "SET ERR OFF" not in text, "SET ERR OFF is not accepted by VFP9"
+    assert "SET ERRORS OFF" not in text
+    assert "ON ERROR DO bench_err" not in text, "bench_err procedure hangs (STRTOFILE) in this VFP9"
+    assert "LOCAL lnMin = " not in text, "LOCAL x = v is illegal VFP"
+    assert "SET DEFAULT TO" in text
+    assert "USE tbl IN 0 SHARED" in text
+    assert "STRTOFILE" in text
+    assert "QUIT" in text
+    assert "COUNT TO lnCt FOR (X > 1)" in text
+    assert res["ok"] is not True
 
 
 if __name__ == "__main__":

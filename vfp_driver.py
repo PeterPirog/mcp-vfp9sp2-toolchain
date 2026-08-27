@@ -399,29 +399,51 @@ def run_run_prg(prg_path, workdir=None, timeout=120):
         workdir = os.path.dirname(prg_path)
 
     prg_name = os.path.basename(prg_path)
+    stem = os.path.splitext(prg_name)[0]
     cmd = [vfp9, "/C", prg_path]
+
+    # Remove a stale .ERR from a previous run so the report reflects THIS run.
+    for base_dir in (os.path.dirname(prg_path), workdir):
+        if not base_dir:
+            continue
+        stale = os.path.join(base_dir, stem + ".ERR")
+        if os.path.isfile(stale):
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
 
     t0 = time.time()
     res = _run_process(cmd, timeout, cwd=workdir)
     duration_ms = int((time.time() - t0) * 1000)
+    hung = res["code"] == -1  # timeout / killed
 
-    # Check for .ERR file (same name as .prg, same directory)
+    # VFP9 /C writes <prg stem>.ERR into its working directory on any compile
+    # or run error. In the hang case stdout is empty, so .ERR is the ONLY place
+    # the real error lives — surface it into stderr and data.errContent.
     err_file = None
-    err_file_path = os.path.join(workdir, os.path.splitext(prg_name)[0] + ".ERR")
-    if os.path.isfile(err_file_path):
-        err_file = err_file_path
-        try:
-            with open(err_file_path, "r", encoding="cp1252", errors="replace") as f:
-                err_content = f.read()
-            if err_content.strip():
-                res["stderr"] = (res["stderr"] + "\n" + err_content).strip()
-        except OSError:
-            pass
+    err_content = ""
+    for base_dir in (os.path.dirname(prg_path), workdir):
+        if not base_dir:
+            continue
+        candidate = os.path.join(base_dir, stem + ".ERR")
+        if os.path.isfile(candidate):
+            err_file = candidate
+            try:
+                with open(candidate, "r", encoding="cp1252", errors="replace") as f:
+                    err_content = f.read().strip()
+            except OSError:
+                err_content = ""
+            break
+    if err_content:
+        res["stderr"] = (res["stderr"] + "\n" + err_content).strip()
 
-    emit(res["code"] == 0, rc=res["code"],
+    emit(res["code"] == 0 and not err_content, rc=res["code"],
          stdout=res["stdout"], stderr=res["stderr"],
          data={"prg": prg_path, "workdir": workdir,
-               "errFile": err_file, "durationMs": duration_ms})
+               "errFile": err_file, "errContent": err_content,
+               "vfpError": bool(err_content),
+               "hung": hung, "durationMs": duration_ms})
 
 
 def run_benchmark(project, table, operation, expression="", field="",
@@ -509,10 +531,8 @@ def run_benchmark(project, table, operation, expression="", field="",
     prg_body = """\
 SET DEFAULT TO '{dane}'
 SET TALK OFF
-SET ERR OFF
-ON ERROR DO bench_err WITH 2
 
-LOCAL lnStart, lnEnd, lnVal, lnCt, lnResult, lnRushmore
+LOCAL lnStart, lnEnd, lnCt, lnResult, lnRushmore
 lnRushmore = 0
 USE {table} IN 0 SHARED
 IF _VFP.Error <> 0
@@ -557,16 +577,11 @@ STRTOFILE("MIN_MS=" + TRANSFORM(lnMin, "1:4"), '{results}', 'C')
 STRTOFILE("MAX_MS=" + TRANSFORM(lnMax, "1:4"), '{results}', 'C')
 STRTOFILE("RUSHMORE=" + TRANSFORM(lnRushmore), '{results}', 'C')
 STRTOFILE("ITERATIONS=" + TRANSFORM(nIter), '{results}', 'C')
-STRTOFILE("BENCH_DONE", '{results}', 'C')
-
-USE
-QUIT
-
-PROCEDURE bench_err
-  STRTOFILE("RUNTIME_ERR err=" + ALLTRIM(TRANSFORM(_VFP.Errno)) + " msg=" + ALLTRIM(_VFP.Message), '{results}', 'C')
-  QUIT
-ENDPROC
-""".format(
+    STRTOFILE("BENCH_DONE", '{results}', 'C')
+    
+    USE
+    QUIT
+    """.format(
     dane=dane_dir.replace("\\", "\\\\"),
     table=table,
     rushmore_line=rushmore_line,
@@ -579,16 +594,36 @@ ENDPROC
     with open(prg_path, "w", encoding="cp1252") as f:
         f.write(prg_body)
 
-    # Run via run_prg
-    t0 = time.time()
+    # Start clean: remove stale results/.ERR from a previous run
+    for stale in (results_path, os.path.join(bench_dir, "benchmark_temp.ERR"),
+                  os.path.join(dane_dir, "benchmark_temp.ERR")):
+        try:
+            if os.path.isfile(stale):
+                os.remove(stale)
+        except OSError:
+            pass
+
     vfp9 = _vfp9_exe()
     if not os.path.isfile(vfp9):
         emit(False, stderr="vfp9.exe not found at: " + vfp9 +
                " (set VFP9_EXE environment variable)")
 
     cmd = [vfp9, "/C", prg_path]
+    t0 = time.time()
     res = _run_process(cmd, timeout, cwd=dane_dir)
     duration_ms = int((time.time() - t0) * 1000)
+
+    # .ERR (if any) is written to the working dir — read the real error
+    bench_err_content = ""
+    for base_dir in (dane_dir, bench_dir, os.path.dirname(prg_path)):
+        candidate = os.path.join(base_dir, "benchmark_temp.ERR")
+        if os.path.isfile(candidate):
+            try:
+                with open(candidate, "r", encoding="cp1252", errors="replace") as f:
+                    bench_err_content = f.read().strip()
+            except OSError:
+                bench_err_content = ""
+            break
 
     # Parse results
     data = {
@@ -603,7 +638,10 @@ ENDPROC
         "rushmore": None,
         "sys3054": None,
         "durationMs": duration_ms,
+        "prg": prg_path,
     }
+    if bench_err_content:
+        data["vfpError"] = bench_err_content
 
     if os.path.isfile(results_path):
         with open(results_path, "r", encoding="cp1252", errors="replace") as f:
