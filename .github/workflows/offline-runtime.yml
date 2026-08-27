@@ -1,0 +1,94 @@
+name: offline-runtime
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: offline-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # BUILD plane: network ALLOWED here (resolving pinned wheels). Produces the
+  # wheelhouse + offline bundle and publishes them as an artifact.
+  build-wheelhouse:
+    name: build (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        python-version: ["3.10", "3.12", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Resolve pinned wheels + verify hashes (network ALLOWED - build plane)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          powershell -ExecutionPolicy Bypass -File scripts/build_offline_bundle.ps1 -PythonVersions "${{ matrix.python-version }}"
+
+      - name: Upload offline bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-bundle-py${{ matrix.python-version }}
+          path: dist/mcp-vfp9sp2-toolchain-offline
+
+  # OFFLINE TEST plane: NO network for the target install. Uses ONLY the
+  # wheelhouse artifact produced above (`pip --no-index --find-links`).
+  offline-test:
+    name: offline-test (${{ matrix.os }}, py${{ matrix.python-version }})
+    needs: build-wheelhouse
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        python-version: ["3.10", "3.12", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download offline bundle (artifact, not PyPI)
+        uses: actions/download-artifact@v4
+        with:
+          name: offline-bundle-py${{ matrix.python-version }}
+          path: dist/mcp-vfp9sp2-toolchain-offline
+
+      - name: Install from local wheelhouse ONLY (no PyPI, no network)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          powershell -ExecutionPolicy Bypass -File dist/mcp-vfp9sp2-toolchain-offline/install-offline.ps1
+
+      - name: Offline runtime verification (imports, pins, origin, versions, hashes, capabilities w/o VFP)
+        shell: pwsh
+        env:
+          VFP9_EXE: C:/ci/no-vfp-here/vfp9.exe
+          VFP_FOXBIN2PRG_DIR: C:/ci/no-foxbin2prg-here
+        run: |
+          python dist/mcp-vfp9sp2-toolchain-offline/scripts/verify_offline_runtime.py --root dist/mcp-vfp9sp2-toolchain-offline/app
+
+      - name: Full test suite (clean install + offline tests)
+        shell: pwsh
+        env:
+          VFP_OFFLINE_WHEELHOUSE: dist/mcp-vfp9sp2-toolchain-offline/wheels/${{ matrix.python-version }}
+          VFP9_EXE: C:/ci/no-vfp-here/vfp9.exe
+          VFP_FOXBIN2PRG_DIR: C:/ci/no-foxbin2prg-here
+        run: |
+          python -m pip install pytest
+          python -m pytest tests -v --color=yes
