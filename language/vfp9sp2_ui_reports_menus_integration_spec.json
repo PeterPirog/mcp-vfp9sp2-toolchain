@@ -1,0 +1,57 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "domain": "ui-reports-menus-integrations",
+  "menus": {
+    "artifacts": [".mnx", ".mnt", ".mpr", ".mpx"],
+    "mustAudit": ["menu hierarchy", "prompts", "commands", "procedures", "shortcuts", "skip-for expressions", "setup/cleanup code", "system menu integration"],
+    "mustTrace": ["DO <menu.mpr>", "SET SYSMENU", "menu-generated DO/DO FORM/command actions"],
+    "generatedSourceMustRemainTraceableToMnx": true
+  },
+  "reports": {
+    "artifacts": [".frx", ".frt"],
+    "labels": [".lbx", ".lbt"],
+    "commands": ["REPORT FORM", "LABEL FORM"],
+    "mustAudit": [
+      "DataEnvironment", "expressions", "variables", "groups", "bands", "objects", "printer/page settings",
+      "report code", "report variables", "user functions", "data aliases", "runtime parameters"
+    ],
+    "vfp9Reporting": {
+      "mustDetectSetReportBehavior": true,
+      "mustDetectObjectAssistedReporting": true,
+      "mustDetectReportListener": true,
+      "reportBehavior90SemanticsRequired": true
+    },
+    "validation": ["compile/open artifact when modified", "round-trip through supported conversion", "visual/output regression where possible"]
+  },
+  "graphicsResources": {
+    "mustInventory": ["BMP", "ICO", "JPG/JPEG", "GIF", "PNG when used by environment/components", "CUR", "ANI"],
+    "mustTracePicturePropertiesAndRuntimeLoads": true
+  },
+  "comOleActiveX": {
+    "mustAudit": true,
+    "constructs": ["CREATEOBJECT()", "GETOBJECT()", "CREATEOBJECTEX()", "OLEPUBLIC", "OLEControl/OLEBoundControl", "ActiveX controls"],
+    "mustCapture": ["ProgID/CLSID when discoverable", "type library", "OCX/DLL file dependency", "events", "methods used", "registration requirement", "32-bit compatibility"],
+    "mustFlagMissingRegistrationAsDeploymentRisk": true
+  },
+  "dllFllNative": {
+    "mustAudit": ["DECLARE - DLL", "SET LIBRARY", "CALL", "FLL dependencies"],
+    "mustCapture": ["library path/name", "function", "parameter/return signature", "calling code", "deployment dependency"],
+    "mustTreatNativeCallsAsHighRiskForAutomatedRefactor": true
+  },
+  "automationServers": {
+    "mustDetectOlePublicClasses": true,
+    "mustDetectBuildDllOrAutomationExeIntent": true,
+    "mustPreservePublicInterfaceCompatibility": true
+  },
+  "externalResources": {
+    "mustTrace": ["GETFILE/PUTFILE results when statically known", "FILE()/FULLPATH()/LOCFILE()", "INI/config files", "help files", "templates", "network paths", "registry access", "shell/process invocation"],
+    "mustPropagateDynamicPathUncertainty": true
+  },
+  "references": [
+    "https://vfphelp.com/foxpro/html/794b4c4e-b0bb-4792-8c19-5920ac0c1efd.htm",
+    "https://vfphelp.com/foxpro/html/083e9a24-ab85-492d-82af-a7730cebaa85.htm",
+    "https://www.vfphelp.com/vfp9/html/5f169eb2-ac64-4836-bd67-6572f33d8624.htm",
+    "https://vfphelp.com/vfp9/html/4ae1a907-aa47-4035-a785-c4f5cb10165f.htm"
+  ]
+}

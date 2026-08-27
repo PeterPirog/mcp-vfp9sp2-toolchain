@@ -1,0 +1,448 @@
+{
+  "schemaVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "offlineRequired": true,
+  "issueStatusValues": [
+    "MICROSOFT_CONFIRMED",
+    "MICROSOFT_DOCUMENTED_BEHAVIOR",
+    "MICROSOFT_SP2_FIXED",
+    "VFPX_CONFIRMED",
+    "COMMUNITY_CONFIRMED",
+    "ENVIRONMENT_DEPENDENT",
+    "UNVERIFIED"
+  ],
+  "issues": [
+    {
+      "id": "VFP9-KB968409-GROUP-HEADER-ORDER",
+      "category": "reporting",
+      "status": "MICROSOFT_CONFIRMED",
+      "severity": "high",
+      "affectedBuilds": ["9.0.0.5815"],
+      "fixedBuilds": ["9.0.0.7423"],
+      "symptoms": ["group header/footer printing order can be wrong when a group footer continues to another page and group header reprint is enabled"],
+      "detection": ["grouped FRX", "reprint group header enabled", "VFP runtime build 5815"],
+      "resolution": ["install/verify Microsoft post-SP2 hotfix KB968409 / build 7423 before rewriting report logic"],
+      "automationPolicy": "warn-and-block-report-refactor-until-build-verified",
+      "provenance": ["Microsoft Support KB968409", "VFPX/VFP9SP2Hotfix3"]
+    },
+    {
+      "id": "VFP9-ENGINEBEHAVIOR-CODEPAGE-RUSHMORE",
+      "category": "sql-rushmore-correctness",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "critical",
+      "affectedEngineModes": [70, 80],
+      "symptoms": ["character indexed expressions can produce incorrect query/update matches when CPCURRENT differs from CPDBF under legacy engine modes"],
+      "detection": ["ENGINEBEHAVIOR 70 or 80", "CPCURRENT() != CPDBF(alias)", "optimizable character index"],
+      "resolution": ["prefer ENGINEBEHAVIOR 90 when application semantics permit", "align code pages when appropriate", "regression-test exact result sets"],
+      "automationPolicy": "never-optimize-for-speed-over-correctness",
+      "provenance": ["VFP9 SP2 Help SET ENGINEBEHAVIOR"]
+    },
+    {
+      "id": "VFP9-DISTINCT-ORDERBY-FIELDLIST",
+      "category": "sql-compatibility",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "affectedEngineModes": [90],
+      "symptoms": ["SELECT DISTINCT can reject ORDER BY expressions/fields not present in SELECT field list"],
+      "resolution": ["make projection/order expressions VFP9-valid", "do not silently downgrade ENGINEBEHAVIOR"],
+      "automationPolicy": "rewrite-only-with-result-equivalence-test",
+      "provenance": ["VFP9 SP2 SQL behavior documentation"]
+    },
+    {
+      "id": "VFP9-DISTINCT-HAVING-FIELDLIST",
+      "category": "sql-compatibility",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "affectedEngineModes": [90],
+      "symptoms": ["DISTINCT/HAVING combinations can be rejected when HAVING references fields outside the projection in affected forms"],
+      "resolution": ["rewrite grouping/projection consistently and verify result equivalence"],
+      "automationPolicy": "manual-semantic-check-required",
+      "provenance": ["VFP9 SP2 SQL behavior documentation"]
+    },
+    {
+      "id": "VFP9-AGGREGATE-NO-MATCH-ROW",
+      "category": "sql-semantics",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "affectedEngineModes": [90],
+      "symptoms": ["aggregate SELECT without GROUP BY can still produce a result row when no source rows match; legacy _TALLY assumptions may fail"],
+      "resolution": ["test row existence, aggregate NULL/default semantics and _TALLY-dependent code explicitly"],
+      "automationPolicy": "preserve-control-flow-semantics",
+      "provenance": ["VFP9 SP2 SQL behavior documentation"]
+    },
+    {
+      "id": "VFP9-TOP-TIES-LEGACY-ENGINE",
+      "category": "sql-semantics",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "affectedEngineModes": [70, 80],
+      "symptoms": ["TOP n with ORDER BY ties can return more than n rows under legacy engine behavior"],
+      "resolution": ["prefer engine mode 90 when compatible", "make exactly-N business logic deterministic"],
+      "automationPolicy": "benchmark-and-result-test",
+      "provenance": ["VFP9 SP2 SQL behavior documentation"]
+    },
+    {
+      "id": "VFP-SP2-FIX-REMOVEPROPERTY-BOUND",
+      "category": "forms-classes",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["crash when removing a bound property"],
+      "resolution": ["verify deployed runtime is SP2 or later before retaining/removing defensive workaround"],
+      "automationPolicy": "legacy-workaround-candidate-only",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-CLASS-CLEAR-INSTABILITY",
+      "category": "forms-classes",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["clearing a class also used in another container class can destabilize VFP"],
+      "resolution": ["verify deployed runtime patch level and retain compatibility workaround until tested"],
+      "automationPolicy": "do-not-delete-workaround-automatically",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-PICTUREVAL-PNG",
+      "category": "ui-images",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "medium",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["PictureVal fails to accept PNG images"],
+      "resolution": ["verify runtime >= SP2 before replacing legacy image-format workarounds"],
+      "automationPolicy": "version-gated",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-FORM-TOOLTIPS-CRASH",
+      "category": "forms-ui",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["closing forms with tooltips can crash"],
+      "resolution": ["verify deployed SP2+ runtime before simplifying tooltip shutdown workarounds"],
+      "automationPolicy": "legacy-workaround-candidate-only",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-PRIVATE-DATASESSION-ORPHAN",
+      "category": "datasession",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["form private DataSession can become orphaned and cause resource/buffer problems"],
+      "resolution": ["verify deployed runtime and regression-test form lifecycle before removing defensive release code"],
+      "automationPolicy": "do-not-reorder-destroy-unload-blindly",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-GRID-MEMO-INDEX",
+      "category": "grid-index",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["grid/memo-tip/index combinations can cause index internal-consistency errors or crashes"],
+      "resolution": ["verify runtime SP2+; preserve workaround until grid/index fixture passes"],
+      "automationPolicy": "fixture-required",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-LISTBOX-ROWSOURCE-CLOSE",
+      "category": "listbox-data",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["fatal exception when closing tables used as ListBox RowSource"],
+      "resolution": ["verify runtime SP2+ and RowSource lifecycle before changing close order"],
+      "automationPolicy": "preserve-lifecycle-until-tested",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-SPT-NULL-TYPE",
+      "category": "spt-cursoradapter",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["SPT can pass NULL values as character values and cause type mismatch; affects CursorAdapter paths too"],
+      "resolution": ["verify SP2+ runtime and parameter typing before altering legacy NULL handling"],
+      "automationPolicy": "version-and-provider-gated",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-INDEX-ISNULL-OPTIMIZER",
+      "category": "indexes-rushmore",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "medium",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["index on ISNULL() may not be used by SQL optimizer in older engine builds"],
+      "resolution": ["do not preserve index workaround solely from source history; verify current SYS(3054) on deployed build"],
+      "automationPolicy": "measure-current-runtime",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-VIEW-DELETE-TAG-INDEX-ON",
+      "category": "indexes-views",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "medium",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["INDEX ON for a view can fail/not create CDX after DELETE TAG ALL"],
+      "resolution": ["verify runtime patch level before introducing custom recovery code"],
+      "automationPolicy": "test-on-copy-only",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-SQL-NOT-IN-CONSTANT-FALSE",
+      "category": "sql-correctness",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "critical",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["NOT IN subquery can return incorrect results in an older constant-false WHERE scenario"],
+      "resolution": ["patch runtime; preserve regression test around exact result set"],
+      "automationPolicy": "result-equivalence-test-required",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-ALL-SOME-ANY-EXACT-EQUAL",
+      "category": "sql-correctness",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["ALL/SOME/ANY comparison can fail with == in older builds"],
+      "resolution": ["verify patch level and keep result regression fixture"],
+      "automationPolicy": "do-not-normalize-equality-operator-without-semantic-test",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-SQL-UNION-INTERNAL-ERROR",
+      "category": "sql-stability",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "high",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["SQL internal error in specific UNION cases"],
+      "resolution": ["verify runtime patch before maintaining query-decomposition workaround"],
+      "automationPolicy": "version-gated",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-REPORTLISTENER-FOOTER-DIMENSIONS",
+      "category": "reporting",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "medium",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["ReportListener AdjustObjectSize can return inaccurate page-footer geometry"],
+      "resolution": ["verify SP2+ and ReportListener implementation before preserving coordinate workarounds"],
+      "automationPolicy": "visual-regression-required",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFP-SP2-FIX-REPORT-PROTECTED-MEMORY-LEAK",
+      "category": "reporting",
+      "status": "MICROSOFT_SP2_FIXED",
+      "severity": "medium",
+      "affectedBuilds": ["pre-9.0.0.5815"],
+      "symptoms": ["memory leak when modifying/previewing reports with protected items"],
+      "resolution": ["verify SP2+ before changing report-protection workaround"],
+      "automationPolicy": "version-gated",
+      "provenance": ["Microsoft VFP9 SP2 bug-fix list preserved by VFPX"]
+    },
+    {
+      "id": "VFPX-REPORTINGAPPS-HIGHDPI",
+      "category": "reporting-dpi",
+      "status": "VFPX_CONFIRMED",
+      "severity": "medium",
+      "symptoms": ["legacy VFP reporting applications can behave poorly at high DPI"],
+      "resolution": ["inventory deployed ReportingApps versions and consider validated VFPX maintained versions with high-DPI fixes"],
+      "automationPolicy": "deployment-change-requires-visual-test",
+      "provenance": ["VFPX/ReportingApps release history"]
+    },
+    {
+      "id": "VFPX-REPORTINGAPPS-GROUP-EXPRESSION-LENGTH",
+      "category": "reporting-builder",
+      "status": "VFPX_CONFIRMED",
+      "severity": "low",
+      "symptoms": ["older ReportBuilder application had practical group-expression length limitations in Print When editing paths"],
+      "resolution": ["use a validated maintained ReportingApps version when this designer limitation is relevant"],
+      "automationPolicy": "do-not-rewrite-frx-solely-for-designer-limit",
+      "provenance": ["VFPX/ReportingApps release history"]
+    },
+    {
+      "id": "VFP9-REPORTPREVIEW-DEPENDENCY",
+      "category": "deployment-reporting",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "symptoms": ["object-assisted report preview fails when ReportPreview/ReportOutput application dependencies cannot be resolved"],
+      "detection": ["SET REPORTBEHAVIOR 90", "REPORT FORM PREVIEW", "missing _REPORTPREVIEW/_REPORTOUTPUT target"],
+      "resolution": ["deploy/resolve the required reporting APP files or explicitly configure equivalent validated components"],
+      "automationPolicy": "dependency-error-not-source-rewrite",
+      "provenance": ["VFP9 SP2 Help object-assisted reporting"]
+    },
+    {
+      "id": "VFP9-REPORT-SAVED-PRINTER-ENVIRONMENT",
+      "category": "reporting-printers",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "symptoms": ["saved printer environment can make report designer/opening slow or problematic when target printer is unavailable or remote"],
+      "resolution": ["avoid preserving machine-specific printer state unless required; audit FRX/LBX printer dependencies"],
+      "automationPolicy": "strip-only-with-explicit-authorization-and-render-test",
+      "provenance": ["VFP9 SP2 reporting documentation"]
+    },
+    {
+      "id": "VFP9-XMLADAPTER-MSXML4",
+      "category": "xml-dependency",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "symptoms": ["XMLAdapter-dependent functionality fails when required MSXML components are absent"],
+      "resolution": ["record/deploy appropriate MSXML prerequisite in the isolated target environment"],
+      "automationPolicy": "dependency-error-not-code-rewrite",
+      "provenance": ["VFP9 SP2 Help XMLAdapter requirements", "VFPX installer notes"]
+    },
+    {
+      "id": "VFP9-ODBC-PRE-VFP7-FEATURE-LIMIT",
+      "category": "data-provider",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "high",
+      "symptoms": ["VFP ODBC driver does not expose/support database features introduced after VFP6"],
+      "resolution": ["prefer VFPOLEDB for tooling requiring VFP9 DBC capabilities; treat ODBC schema as incomplete"],
+      "automationPolicy": "never-claim-complete-dbc-from-odbc",
+      "provenance": ["Visual FoxPro ODBC driver release notes preserved by VFPX"]
+    },
+    {
+      "id": "VFP9-VFPOLEDB-SINGLE-RESULTSET",
+      "category": "data-provider",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "symptoms": ["VFP OLE DB Provider does not support multiple result sets"],
+      "resolution": ["design provider commands as one-result-set operations and split multi-result workflows"],
+      "automationPolicy": "do-not-generate-mars-assumptions",
+      "provenance": ["VFP9 OLE DB Provider documentation"]
+    },
+    {
+      "id": "VFP9-ACTIVEX-MS08-070",
+      "category": "activex-security",
+      "status": "MICROSOFT_CONFIRMED",
+      "severity": "critical",
+      "symptoms": ["legacy ActiveX controls used by VFP-era applications may require security-updated OCX versions and correct registration"],
+      "resolution": ["inventory ProgID/CLSID/version", "use vendor/Microsoft-patched controls when licensed", "validate isolated deployment"],
+      "automationPolicy": "never-copy-random-ocx-from-dev-machine",
+      "provenance": ["Microsoft MS08-070"]
+    },
+    {
+      "id": "VFP9-FOXUSER-RESOURCE-DEPENDENCY",
+      "category": "runtime-resource",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "low",
+      "symptoms": ["shared FoxUser resource table introduces writable shared-state dependency"],
+      "resolution": ["use RESOURCE=OFF/SET RESOURCE OFF in production applications that do not require FoxUser persistence", "otherwise preserve FoxUser.dbf+FoxUser.fpt pair"],
+      "automationPolicy": "project-intent-required",
+      "provenance": ["VFP9 SP2 SET RESOURCE/FoxUser documentation"]
+    },
+    {
+      "id": "VFP9-TABLE-CORRUPT-2091",
+      "category": "data-integrity",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "critical",
+      "symptoms": ["VFP reports table corruption when DBF header/record count/file size consistency is invalid"],
+      "resolution": ["freeze source", "hash/copy artifact", "repair only on isolated copy", "compare recovered data"],
+      "automationPolicy": "block-write-and-destructive-repair",
+      "provenance": ["VFP9 SP2 Help table corruption/error documentation"]
+    },
+    {
+      "id": "VFP9-TABLEVALIDATE-LOWERED",
+      "category": "data-integrity",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "high",
+      "symptoms": ["reduced SET TABLEVALIDATE can hide integrity checks and allow unsafe processing"],
+      "resolution": ["record effective level", "treat lowered validation as risk", "do not lower automatically to force access"],
+      "automationPolicy": "warn-and-block-auto-repair",
+      "provenance": ["VFP9 SP2 SET TABLEVALIDATE documentation"]
+    },
+    {
+      "id": "VFP9-SCAN-CONTROLLING-INDEX-MUTATION",
+      "category": "data-loop-semantics",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "critical",
+      "symptoms": ["REPLACE/updates during ordered SCAN can move records in the controlling index and change visitation order"],
+      "resolution": ["detect key/filter/relation field mutations before rewriting loop", "use fixture/regression tests"],
+      "automationPolicy": "never-refactor-blindly",
+      "provenance": ["VFP9 SP2 SCAN/REPLACE/index documentation"]
+    },
+    {
+      "id": "VFP9-RUSHMORE-WHILE",
+      "category": "rushmore",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "medium",
+      "symptoms": ["commands with WHILE do not receive the same Rushmore optimization treatment as optimizable FOR/WHERE forms"],
+      "resolution": ["model WHILE separately; do not claim FULL Rushmore from an apparently matching tag"],
+      "automationPolicy": "sys3054-or-unknown",
+      "provenance": ["VFP9 SP2 Rushmore optimization documentation"]
+    },
+    {
+      "id": "VFP9-INDEX-KEY-SIZE",
+      "category": "indexes-limits",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "critical",
+      "symptoms": ["proposed CDX/IDX key expression can exceed VFP key byte limits, especially with non-MACHINE collation or nullable fields"],
+      "limits": {"compactOrCdxBytes": 240, "nonCompactIdxBytes": 100},
+      "resolution": ["compute worst-case key bytes before INDEX ON proposal", "include collation/nullability overhead"],
+      "automationPolicy": "reject-unsafe-index-plan",
+      "provenance": ["VFP9 SP2 System Capacities / INDEX documentation"]
+    },
+    {
+      "id": "VFP9-FILE-SIZE-LIMIT-2GB",
+      "category": "storage-limits",
+      "status": "MICROSOFT_DOCUMENTED_BEHAVIOR",
+      "severity": "critical",
+      "symptoms": ["DBF or FPT approaches VFP 2 GB maximum file size"],
+      "limits": {"dbfBytesApprox": 2147483647, "fptBytesApprox": 2147483647},
+      "resolution": ["report capacity risk", "archive/split/redesign data store with application-level migration plan"],
+      "automationPolicy": "never-pack-or-truncate-as-auto-fix",
+      "provenance": ["VFP9 SP2 System Capacities"]
+    },
+    {
+      "id": "VFP9-HIGHDPI-MODERN-WINDOWS",
+      "category": "modern-windows-ui",
+      "status": "ENVIRONMENT_DEPENDENT",
+      "severity": "medium",
+      "symptoms": ["scaling/layout/report preview behavior can vary on modern high-DPI Windows configurations"],
+      "resolution": ["capture Windows/DPI/manifest state", "use visual regression tests", "consider maintained VFPX reporting components where relevant"],
+      "automationPolicy": "never-auto-change-layout-or-manifest",
+      "provenance": ["VFPX ReportingApps high-DPI fixes", "community operational experience"]
+    },
+    {
+      "id": "VFP9-C0000005-GENERIC",
+      "category": "fatal-exception",
+      "status": "ENVIRONMENT_DEPENDENT",
+      "severity": "critical",
+      "symptoms": ["C0000005/fatal exception"],
+      "resolution": ["capture exact build, stack/context, aliases/orders, ActiveX/report/provider state", "match specific known issue before changing code"],
+      "automationPolicy": "never-generic-reindex-or-dll-replacement",
+      "provenance": ["multiple Microsoft SP2 bug fixes demonstrate that C5 has many unrelated causes"]
+    }
+  ],
+  "systemCapacities": {
+    "dbfMax": "2 GB",
+    "fptMax": "2 GB",
+    "recordsPerTableMax": 1000000000,
+    "fieldsPerRecordMax": 255,
+    "recordCharacterCapacity": 65500,
+    "compactCdxKeyBytesMax": 240,
+    "nonCompactIdxKeyBytesMax": 100,
+    "selectFieldsMax": 255,
+    "commandLineCharsMax": 8192,
+    "macroSubstitutedLineCharsMax": 8192,
+    "characterMemoryVariableCharsMax": 16777184,
+    "reportRuntimePagesMax": 65534
+  },
+  "offlineFallback": {
+    "unknownIssueCode": "KNOWN_ISSUE_NOT_FOUND",
+    "action": "preserve failing fixture, collect runtime diagnostics, do not invent workaround"
+  },
+  "provenanceUrls": [
+    "https://github.com/VFPX/VFP9SP2Hotfix3",
+    "https://github.com/VFPX/VFPInstallers",
+    "https://github.com/VFPX/ReportingApps",
+    "https://github.com/VFPX/HelpFile",
+    "https://www.vfphelp.com/"
+  ]
+}

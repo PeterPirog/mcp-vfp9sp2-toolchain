@@ -71,6 +71,22 @@ def test_foxbin2prg_env_override():
             os.environ["VFP_FOXBIN2PRG_DIR"] = orig
 
 
+def test_binary_companion_pairs():
+    """Primary VFP binary artifacts must use their real binary memo companions."""
+    assert vfp_common.COMPANIONS[".scx"] == (".sct",)
+    assert vfp_common.COMPANIONS[".vcx"] == (".vct",)
+    assert vfp_common.COMPANIONS[".frx"] == (".frt",)
+    assert vfp_common.COMPANIONS[".mnx"] == (".mnt",)
+    assert vfp_common.COMPANIONS[".pjx"] == (".pjt",)
+    assert vfp_common.COMPANIONS[".lbx"] == (".lbt",)
+    assert vfp_common.COMPANIONS[".dbc"] == (".dcx", ".dct")
+
+
+def test_label_text_representation_is_not_binary_companion():
+    """FoxBin2Prg .lb2 text output must never be mistaken for Label Designer .lbt."""
+    assert ".lb2" not in vfp_common.COMPANIONS[".lbx"]
+
+
 if __name__ == "__main__":
     fns = [v for k, v in list(globals().items()) if k.startswith("test_")]
     passed = 0

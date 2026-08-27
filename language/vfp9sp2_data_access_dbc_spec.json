@@ -1,0 +1,75 @@
+{
+  "specVersion": "0.1.0",
+  "dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "domain": "data-access-dbc",
+  "dbcArtifacts": [".dbc", ".dct", ".dcx"],
+  "dbcModel": {
+    "mustDistinguishFreeAndDatabaseTables": true,
+    "mustAudit": [
+      "tables", "fields", "primary keys", "candidate keys", "persistent relations", "field rules", "table rules",
+      "default values", "insert/update/delete triggers", "stored procedures", "local views", "remote views", "connections"
+    ],
+    "mustUseRuntimeOrDocumentedMetadata": true,
+    "mustNotInferCompleteRelationsFromSourceCoOccurrence": true
+  },
+  "views": {
+    "families": ["local view", "remote view"],
+    "mustCapture": [
+      "SQL definition", "connection", "source tables", "parameters", "updateability", "key fields", "updatable fields",
+      "send updates", "where type", "fetch size", "max records", "prepared", "share connection", "buffering-related properties"
+    ],
+    "mustDetectParameterExpressions": true,
+    "mustDetectDynamicViewProperties": true
+  },
+  "cursorAdapter": {
+    "mustAudit": true,
+    "mustCaptureProperties": [
+      "Alias", "DataSource", "DataSourceType", "SelectCmd", "InsertCmd", "UpdateCmd", "DeleteCmd", "KeyFieldList",
+      "UpdatableFieldList", "UpdateNameList", "Tables", "WhereType", "BufferModeOverride", "FetchAsNeeded",
+      "MaxRecords", "BatchUpdateCount", "UseTransactions", "CompareMemo", "SendUpdates"
+    ],
+    "mustCaptureMethods": ["CursorFill", "CursorRefresh", "CursorAttach", "CursorDetach", "BeforeCursorFill", "AfterCursorFill"],
+    "mustDetectCommandGenerationVsCustomCommands": true
+  },
+  "sqlPassThrough": {
+    "mustAudit": true,
+    "functions": [
+      "SQLCONNECT()", "SQLSTRINGCONNECT()", "SQLDISCONNECT()", "SQLPREPARE()", "SQLEXEC()", "SQLMORERESULTS()",
+      "SQLCOMMIT()", "SQLROLLBACK()", "SQLCANCEL()", "SQLGETPROP()", "SQLSETPROP()", "AERROR()"
+    ],
+    "mustCapture": ["connection creation", "connection string source", "handle lifetime", "transactions", "async mode", "query timeout", "batching", "error handling"],
+    "security": {
+      "mustFlagEmbeddedCredentials": true,
+      "mustNotEchoSecretsInAudit": true
+    }
+  },
+  "nativeDataCommands": {
+    "mustAudit": [
+      "USE", "SELECT work area", "SCAN", "LOCATE", "SEEK", "INDEXSEEK", "CALCULATE", "COUNT", "SUM", "AVERAGE",
+      "REPLACE", "APPEND", "DELETE", "RECALL", "SET FILTER", "SET KEY", "SET RELATION", "SET ORDER"
+    ],
+    "mustTrackAliasAndRecordPointerSideEffects": true
+  },
+  "bufferingLockingTransactions": {
+    "mustAudit": [
+      "CURSORGETPROP()", "CURSORSETPROP()", "TABLEUPDATE()", "TABLEREVERT()", "GETFLDSTATE()", "GETNEXTMODIFIED()",
+      "RLOCK()", "FLOCK()", "UNLOCK", "SET REPROCESS", "SET MULTILOCKS", "BEGIN TRANSACTION", "END TRANSACTION", "ROLLBACK"
+    ],
+    "mustPreserveMultiUserSemantics": true,
+    "mustDetectLongOperationsInsideLocks": true
+  },
+  "dataValidation": {
+    "mustPreserveDeletedRecordSemantics": true,
+    "mustCaptureSetDeleted": true,
+    "mustPreserveNullSemantics": true,
+    "mustPreserveCodePage": true,
+    "mustValidateMemoFptPresenceWhenRequired": true
+  },
+  "references": [
+    "https://vfphelp.com/vfp9/html/19f2a679-bbf3-4343-9ad8-fd20824e8198.htm",
+    "https://www.vfphelp.com/help/html/0d2d3d9c-3f42-4f68-bf07-3fc898cc66e3.htm",
+    "https://vfphelp.com/vfp9/html/52e03475-2a7b-4e36-b687-36d54b6b7b74.htm",
+    "https://vfphelp.com/vfp9/html/b6396e25-9b74-42f8-9886-295a0d0f60cb.htm",
+    "https://www.vfphelp.com/help/html/7b7bb07b-9188-4d78-b0be-2fca5edc7f32.htm"
+  ]
+}

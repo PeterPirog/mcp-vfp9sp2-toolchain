@@ -1,19 +1,48 @@
 {
-  "schemaVersion": 2,
-  "version": "0.2.0",
+  "schemaVersion": 3,
+  "version": "0.3.0-architecture",
   "readOnly": true,
+  "target": {
+    "dialect": "microsoft.visual-foxpro.9.0.sp2",
+    "hostPlatform": "windows",
+    "futureMcpServer": true,
+    "mcpImplemented": false
+  },
   "vfp": {
     "exeEnvironmentVariable": "VFP9_EXE",
     "exeDefault": "C:\\Program Files (x86)\\Microsoft Visual FoxPro 9\\vfp9.exe",
-    "requiresVFP9": true,
-    "description": "VFP9 is required for BIN2PRG conversion via FoxBin2Prg. DBF schema/export works WITHOUT VFP9 using pure-Python dbfread."
+    "requiresVFP9ForAllReads": false,
+    "description": "Target platform is Microsoft Visual FoxPro 9.0 SP2. Pure READ operations must remain available without VFP. VFP9 SP2 is the enhanced/authoritative backend for FoxBin2Prg, runtime introspection, SYS(3054), compiler/build validation, REINDEX and controlled workspace writes."
+  },
+  "serviceArchitecture": {
+    "transportIndependentCoreRequired": true,
+    "currentAdapters": ["cli", "opencode"],
+    "futureAdapters": ["mcp"],
+    "capabilityModel": "docs/mcp_capability_model.json",
+    "pathSecurityRequired": true,
+    "sourceImmutableByDefault": true
   },
   "foxbin2prg": {
     "programFile": "foxbin2prg.prg",
     "directoryEnvironmentVariable": "VFP_FOXBIN2PRG_DIR",
     "directoryDefault": "tools/foxbin2prg",
     "upstream": "https://github.com/fdbozzo/foxbin2prg",
-    "timeoutMs": 600000
+    "timeoutMs": 600000,
+    "sourceDirection": "BIN2PRG_ONLY"
+  },
+  "dbfbridge": {
+    "upstream": "https://github.com/PeterPirog/dbfbridge",
+    "vendored": true,
+    "directory": "tools/dbfbridge",
+    "vfpRequired": false
+  },
+  "anonymization": {
+    "upstream": "https://github.com/PeterPirog/DBF_Anonymizer",
+    "implementedInToolchain": false,
+    "architecture": "docs/ANONYMIZATION_INTEGRATION.md",
+    "dictionarySensitive": true,
+    "recoveryCanBeDisabled": true,
+    "vfpRequirement": "conditional: required for validated structural CDX rebuild"
   },
   "aiProfile": {
     "file": "FoxBin2Prg-AI.cfg",
@@ -25,6 +54,31 @@
   },
   "dbfExport": {
     "formats": ["jsonl", "csv", "json", "xlsx"]
+  },
+  "knowledge": {
+    "dialect": "microsoft.visual-foxpro.9.0.sp2",
+    "offlineRequired": true,
+    "knowledgeStatus": "DOMAIN_READY_EXACT_LANGUAGE_CATALOG_INCOMPLETE",
+    "autonomousCodeGenerationAllowed": false,
+    "unknownIssuePolicy": "KNOWN_ISSUE_NOT_FOUND: preserve fixture and diagnostics; never invent an online workaround while offline",
+    "mandatory": [
+      "language/VFP9SP2_REQUIRED_KNOWLEDGE.md",
+      "language/VFP9SP2_COMPLETE_APPLICATION_KNOWLEDGE.md",
+      "language/VFP9SP2_OFFLINE_KNOWLEDGE_AND_ERRATA.md",
+      "language/VFP9SP2_KNOWLEDGE_COMPLETENESS_GATE.md",
+      "language/VFP9SP2_PERFORMANCE_OPTIMIZATION.md",
+      "language/vfp9sp2_known_issues.json",
+      "language/vfp9sp2_core_spec.json",
+      "language/vfp9sp2_forms_spec.json",
+      "language/vfp9sp2_indexes_rushmore_spec.json",
+      "language/vfp9sp2_application_build_runtime_spec.json",
+      "language/vfp9sp2_data_access_dbc_spec.json",
+      "language/vfp9sp2_ui_reports_menus_integration_spec.json",
+      "language/VFP9SP2_CAPABILITY_MATRIX.md",
+      "docs/MCP_TARGET_ARCHITECTURE.md",
+      "docs/ANONYMIZATION_INTEGRATION.md",
+      "docs/mcp_capability_model.json"
+    ]
   },
   "defaultExcludes": [
     ".git",
@@ -38,7 +92,7 @@
   ],
   "artifacts": {
     "bin2prg": ["pjx", "scx", "vcx", "frx", "lbx", "mnx", "dbc", "dbf"],
-    "indexText": ["prg", "h", "pj2", "sc2", "vc2", "fr2", "mn2", "dc2", "db2", "jsonl", "schema.json"],
-    "detect": ["prg", "h", "pjx", "pjt", "pj2", "scx", "sct", "sc2", "vcx", "vct", "vc2", "frx", "frt", "fr2", "mnx", "mnt", "mn2", "lbx", "lb2", "dbc", "dct", "dcx", "dc2", "dbf", "fpt", "cdx"]
+    "indexText": ["prg", "h", "pj2", "sc2", "vc2", "fr2", "mn2", "dc2", "db2", "lb2", "jsonl", "schema.json"],
+    "detect": ["prg", "h", "pjx", "pjt", "pj2", "scx", "sct", "sc2", "vcx", "vct", "vc2", "frx", "frt", "fr2", "mnx", "mnt", "mn2", "lbx", "lbt", "lb2", "dbc", "dct", "dcx", "dc2", "dbf", "fpt", "cdx", "idx", "mpr", "mpx", "app", "exe", "fxp", "dll", "fll", "ocx", "tlb", "fpw"]
   }
 }
