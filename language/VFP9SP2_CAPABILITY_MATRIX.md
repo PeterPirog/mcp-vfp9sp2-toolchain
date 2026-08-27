@@ -16,8 +16,8 @@ Do not claim full application support when only the knowledge contract exists.
 | Classes VCX/VCT | forms/core specs | BIN2PRG + class indexing | pure raw/table read target; VFP enhanced conversion | PARTIAL IMPLEMENTATION |
 | DBF/FPT schema/data | required knowledge + data spec | strong vendored dbfbridge export path | PURE_READ / PURE_WRITE_COPY | IMPLEMENTED FOR AUDIT |
 | DBF reconstruction/quality | dbfbridge integration | vendored dbfbridge supports reconstruction/verification | no VFP for DBF/FPT core | IMPLEMENTED BACKEND, PARTIAL TOOL SURFACE |
-| Data anonymization | `docs/ANONYMIZATION_INTEGRATION.md` | DBF_Anonymizer not yet integrated into toolchain | no VFP without structural CDX; VFP required for valid CDX rebuild | ROADMAP |
-| Anonymization recovery | privacy contract | not implemented | PRIVACY_SENSITIVE | ROADMAP / RESTRICTED |
+| Data anonymization | `docs/ANONYMIZATION_INTEGRATION.md` | DBF_Anonymizer 0.3.0 vendored + adapter + `vfp_anonymization_status` (read-only); controlled mutating tools are next phase | no VFP without structural CDX; VFP required for valid CDX rebuild | DEPENDENCY + ADAPTER IMPLEMENTED / MUTATING TOOLS NEXT PHASE |
+| Anonymization recovery | privacy contract | recovery capability present in vendored package; NOT exposed as a tool (restricted by design) | PRIVACY_SENSITIVE | ROADMAP / RESTRICTED |
 | CDX/IDX | index/Rushmore spec | structural heuristic parser + limited VFP enrichment | pure heuristic read + VFP authoritative enrichment | PARTIAL / HEURISTIC |
 | Rushmore/SYS(3054) | index/Rushmore + performance spec | not yet complete automated runtime profiling | VFP_READ_ENHANCED | KNOWLEDGE ONLY / ROADMAP |
 | Performance optimization | `VFP9SP2_PERFORMANCE_OPTIMIZATION.md` | partial audits, no complete evidence/benchmark engine | mixed pure static + VFP runtime | KNOWLEDGE READY / IMPLEMENTATION PARTIAL |
@@ -36,8 +36,10 @@ Do not claim full application support when only the knowledge contract exists.
 | DLL/FLL native integrations | UI/report/menu spec | no dedicated signature/dependency audit | PURE_READ | KNOWLEDGE ONLY / ROADMAP |
 | Deployment/runtime dependencies | application-build-runtime spec | no deployment manifest | PURE_READ | KNOWLEDGE ONLY / ROADMAP |
 | Pure-read designer parser | MCP target architecture | not implemented as complete normalized reader | MUST work without VFP | ROADMAP / HIGH PRIORITY |
-| Capability discovery | `docs/mcp_capability_model.json` | not yet exposed as service/OpenCode tool | PURE_READ | ROADMAP / HIGH PRIORITY |
-| Transport-neutral Python service layer | `docs/MCP_TARGET_ARCHITECTURE.md` | current logic still spread across CLI/modules/OpenCode adapters | no VFP required for core dispatch | ROADMAP / HIGH PRIORITY |
+| Capability discovery | `docs/mcp_capability_model.json` | `vfp_capabilities` implemented in Core Service + CLI + OpenCode (PURE_READ, no VFP launch) | PURE_READ | IMPLEMENTED PURE_READ |
+| Transport-neutral Python service layer | `docs/MCP_TARGET_ARCHITECTURE.md` | `src/vfp_toolchain` core service + backends; CLI/OpenCode are thin adapters; `vfp_detect` routed through core | no VFP required for core dispatch | IMPLEMENTED (foundation) |
+| OpenCode vfp_detect through Core | MCP target architecture | `tools/vfp.ts` `vfp_detect` is a thin adapter over `vfp_driver.py detect` (no duplicated walk) | PURE_READ | IMPLEMENTED PURE_READ |
+| dbfbridge adapter | `tools/VENDORED_DEPENDENCIES.json` | `DBFBridgeBackend` wraps the pinned vendored public API | no VFP | IMPLEMENTED |
 | MCP server | MCP target architecture | intentionally not implemented yet | Windows target | FUTURE ROADMAP |
 | Safe refactor workspace | required/forms specs | not implemented on current main read-only architecture | VFP_WRITE_WORKSPACE | ROADMAP |
 | Compile/round-trip validation | required/forms specs | not implemented as write/refactor tool API | VFP_BUILD_VALIDATE | ROADMAP |
@@ -47,7 +49,7 @@ Do not claim full application support when only the knowledge contract exists.
 
 The repository contains a broad enough **domain knowledge contract** to plan a complete VFP9 SP2 application service, but the current executable toolset on `main` is still primarily a read-only audit/export system.
 
-The target architecture is now explicitly **MCP-ready but not MCP-implemented**. Domain logic should be moved into a transport-neutral Python service layer so that current CLI/OpenCode adapters and a future MCP server call the same functions and return the same structured result models.
+The target architecture is now explicitly **MCP-ready but not MCP-implemented**. The transport-neutral Core Service foundation (`src/vfp_toolchain`) is implemented: capability discovery, project detection, dependency adapters and the shared result model exist, and the CLI/OpenCode adapters call it. A future MCP server will be another thin adapter over the same service.
 
 The following claims must therefore NOT be made yet:
 
@@ -58,7 +60,7 @@ The following claims must therefore NOT be made yet:
 - "FULL Rushmore" without SYS(3054) evidence,
 - "production-ready optimized form" without compile/round-trip/regression validation,
 - "all READ operations work without VFP" until the pure designer readers are implemented,
-- "anonymization is integrated" until the DBF_Anonymizer adapter and tests exist,
+- "anonymization is integrated" until the controlled anonymize/verify/self-test tools exist (only the vendored dependency, adapter and read-only status are in place),
 - "MCP server available" before the transport adapter is actually implemented.
 
 ## Capability classes

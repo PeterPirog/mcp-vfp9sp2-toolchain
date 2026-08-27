@@ -1,0 +1,27 @@
+# DBF_Anonymizer vendored snapshot - provenance
+#
+# package                 : dbf_anonymizer 0.3.0
+# upstream URL            : https://github.com/PeterPirog/DBF_Anonymizer
+# upstream commit         : ed7915497862850c3de650f2c50c86569442ff77
+# upstream version        : 0.3.0 (pyproject.toml and dbf_anonymizer.__version__ agree)
+# vendored date           : 2026-08-27
+# license                 : MIT (declared in upstream pyproject.toml: license = { text = "MIT" };
+#                           note: the upstream repository at this commit does NOT contain a
+#                           LICENSE file — only the pyproject declaration)
+# dbfbridge required      : git+https://github.com/PeterPirog/dbfbridge.git@addbadb9281914661bf742924f45039e46a895cd
+#                           (matches the toolchain vendored snapshot at tools/dbfbridge)
+# vendored contents       : src/dbf_anonymizer/ only (runtime package, 20 modules)
+#                           Excluded: tests/, benchmarks/, docs/, .github/, .env.example,
+#                           pyproject.toml, sensitive dictionaries, generated artifacts.
+# local modifications     : NONE
+#
+# This is a frozen copy so the toolchain works offline. The runtime NEVER
+# downloads this package. The vendored dbf_anonymizer imports `dbfbridge`
+# (dbfbridge/verification.py, dbfbridge/worker_tasks.py, dbf_bridge.importer.*);
+# the toolchain guarantees the vendored tools/dbfbridge package is on sys.path
+# before the anonymizer is imported (see src/vfp_toolchain/backends/dbf_anonymizer_backend.py).
+#
+# To update: re-extract from a fresh clone at the desired commit
+# (git archive <commit> src/dbf_anonymizer), replace this directory,
+# update this file and tools/VENDORED_DEPENDENCIES.json, then run the full
+# anonymizer upstream test suite against the vendored dbfbridge.

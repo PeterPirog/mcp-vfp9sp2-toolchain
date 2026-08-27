@@ -1,6 +1,11 @@
 # DBF anonymization integration for mcp-vfp9sp2-toolchain
 
-Status: architecture contract. Integration is not yet implemented in the main toolchain.
+Status: architecture contract. **Phase 1 foundation implemented**: the pinned
+DBF_Anonymizer 0.3.0 runtime is vendored (`tools/dbf_anonymizer/`), a
+`DBFAnonymizerBackend` adapter exists, and a read-only `vfp_anonymization_status`
+operation is exposed (CLI + OpenCode). The **controlled mutating tools
+(`vfp_anonymize`, `vfp_recover_data`, self-test) are NOT yet exposed** — they
+are the next phase, per the security and capability rules below.
 
 Upstream privacy engine:
 
@@ -23,15 +28,13 @@ Microsoft Visual FoxPro 9.0 SP2 required when structural CDX output must be rebu
 
 Do not copy anonymization algorithms into unrelated modules.
 
-Integrate DBF_Anonymizer through a first-party adapter in the toolchain service layer:
+Integrate DBF_Anonymizer through a first-party adapter in the toolchain service layer.
 
-```text
-src/vfp_toolchain/privacy/
-  service.py
-  models.py
-  adapter_dbf_anonymizer.py
-  policy.py
-```
+Phase 1 implemented this as `src/vfp_toolchain/backends/dbf_anonymizer_backend.py`
+(adapting the vendored public API: `anonymize_directory`, `make_dbf_recovery`,
+`self_test`) plus the read-only service operation
+`VFPToolchainService.anonymization_status()`. A dedicated `privacy/` subpackage
+is the intended final home once mutating operations are added.
 
 The future OpenCode and MCP tools call the same privacy service.
 

@@ -41,6 +41,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VBS = os.path.join(HERE, "vfp_convert.vbs")
 VBS_VERNO = os.path.join(HERE, "vfp_verno.vbs")
 
+# Make the transport-neutral Core Service importable (src/vfp_toolchain).
+_SRC = os.path.join(HERE, "src")
+if os.path.isdir(_SRC) and _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
 # Extensions that can be converted to text via FoxBin2Prg (BIN2PRG).
 # Matches config.json -> artifacts.bin2prg (single source of truth).
 BIN_WRITEABLE = [".pjx", ".scx", ".vcx", ".frx", ".lbx", ".mnx", ".dbc", ".dbf"]
@@ -456,6 +461,52 @@ def run_dbf_dir(source, out, formats, deleted):
     except Exception as e:
         emit(False, status=vfp_protocol.STATUS_FAIL, errorCode="EXPORT_FAILED",
              stderr="dbf_dir batch export failed: %s" % e)
+
+
+# ---------------------------------------------------------------------------
+# Core Service operations (transport-neutral; the CLI is only an adapter)
+# ---------------------------------------------------------------------------
+
+def _core_service():
+    """Create a VFPToolchainService (thin, per-call — no global singleton)."""
+    try:
+        from vfp_toolchain import VFPToolchainService
+    except Exception as e:
+        emit(False, status=vfp_protocol.STATUS_FAIL, errorCode="INTERNAL_ERROR",
+             stderr="cannot import vfp_toolchain core service: %s" % e)
+    return VFPToolchainService()
+
+
+def _emit_result(result, fallback_ec):
+    """Serialize an OperationResult with the legacy CLI protocol (and exit)."""
+    d = result.to_dict()
+    if d["rc"] is None:
+        d["rc"] = 0 if d["ok"] else 1
+    emit(d["ok"],
+         status=d["status"],
+         errorCode=d["errorCode"] or (None if d["ok"] else fallback_ec),
+         rc=d["rc"],
+         stdout=d["stdout"], stderr=d["stderr"],
+         data=d["data"],
+         operation=d["operation"],
+         requires=d["requires"],
+         backend=d["backend"],
+         sourceModified=d["sourceModified"],
+         warnings=d["warnings"],
+         errors=d["errors"],
+         metadata=d["metadata"])
+
+
+def run_capabilities():
+    """vfp_capabilities — PURE_READ capability discovery (no VFP launch)."""
+    result = _core_service().capabilities()
+    _emit_result(result, "CAPABILITIES_FAILED")
+
+
+def run_detect(directory):
+    """vfp_detect — VFP artifact detection via the Core Service (PURE_READ)."""
+    result = _core_service().detect_project(directory)
+    _emit_result(result, "DETECT_FAILED")
 
 
 def run_cdx_info(dbf, cdx=None, timeout=120):
@@ -1359,6 +1410,16 @@ def main():
     pfd.add_argument("--min-lines", type=int, default=10, help="Minimum block size")
     pfd.add_argument("--out", default=None, help="Output JSON file")
 
+    pcap = sub.add_parser("capabilities",
+                          help="Core Service capability discovery (PURE_READ, no VFP launch)")
+
+    pdet = sub.add_parser("detect",
+                          help="Detect VFP project artifacts via the Core Service (PURE_READ, no VFP9)")
+    pdet.add_argument("--directory", required=True, help="Project directory to scan")
+
+    pan = sub.add_parser("anonymization_status",
+                         help="Read-only DBF_Anonymizer subsystem status (no anonymization, no writes)")
+
     pa = sub.add_parser("audit", help="Run comprehensive audit: sync + DBF schema + table relationships + class analysis")
     pa.add_argument("--source", required=True, help="VFP project root directory")
     pa.add_argument("--out", required=True, help="Output directory for audit report")
@@ -1467,6 +1528,12 @@ def main():
         run_cdx_scan(a.dir)
     elif a.cmd == "dbf_dir":
         run_dbf_dir(a.source, a.out, a.formats, a.deleted)
+    elif a.cmd == "capabilities":
+        run_capabilities()
+    elif a.cmd == "detect":
+        run_detect(a.directory)
+    elif a.cmd == "anonymization_status":
+        _emit_result(_core_service().anonymization_status(), "ANONYMIZATION_STATUS_FAILED")
     elif a.cmd == "audit":
         run_audit(a.source, a.out, a.skip_sync, a.include_data, a.data_formats,
                   a.max_tables, a.dbf_exclude, a.no_cache_scan,

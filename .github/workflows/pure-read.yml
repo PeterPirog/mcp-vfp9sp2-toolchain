@@ -1,0 +1,62 @@
+name: pure-read
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pure-read-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pure-read:
+    # The CI runner deliberately has NO Visual FoxPro and NO FoxBin2Prg
+    # installation. The point of this workflow is to PROVE that the
+    # PURE_READ plane (Core Service, capability discovery, detection,
+    # dbfbridge + DBF_Anonymizer adapters) works without VFP.
+    name: pure-read (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is MANDATORY (target platform) and is where the full suite
+        # is green. Ubuntu was trialled but a few pre-existing tests encode
+        # Windows path semantics (e.g. test_common.foxbin2prg_env_override);
+        # until those are made platform-agnostic we keep the guarantee on the
+        # required platform rather than masking platform-specific assertions.
+        os: [windows-latest]
+        python-version: ["3.10", "3.12", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test runner + declared runtime reader (dev/CI-only action)
+        # dbfread is the documented runtime DBF reader dependency (THANKS.md);
+        # installing it here is a CI provisioning step, not a runtime download
+        # by the toolchain — the tool itself never pip-installs at request time.
+        run: python -m pip install --upgrade pytest dbfread
+
+      # The no-VFP guarantee is enforced by the test suite itself: the tests
+      # point VFP9_EXE / VFP_FOXBIN2PRG_DIR at non-existent paths (see the
+      # test env block below) and assert the PURE_READ plane still passes.
+      # GitHub runners ship without Visual FoxPro.
+
+      - name: Baseline import check (no side effects, no VFP)
+        run: python -c "import sys, os; sys.path.insert(0, 'src'); import vfp_toolchain; print('import OK')"
+
+      - name: Test suite (VFP-dependent tests are skipped, never masked)
+        run: python -m pytest tests -v --color=yes
+        env:
+          # Make capability discovery report a clean "no VFP" state.
+          VFP9_EXE: C:/ci/no-vfp-here/vfp9.exe
+          VFP_FOXBIN2PRG_DIR: C:/ci/no-foxbin2prg-here
+          # POSIX note: the Windows-style paths above are intentionally
+          # non-existent on both OSes for this check.

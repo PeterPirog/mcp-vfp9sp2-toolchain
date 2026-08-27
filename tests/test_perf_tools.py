@@ -15,6 +15,8 @@ import os
 import sys
 import tempfile
 
+import pytest
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
@@ -197,6 +199,10 @@ def test_run_prg_missing_file():
     assert res["ok"] is False
 
 
+@pytest.mark.skipif(
+    not _vfp9_available(),
+    reason="requires an installed VFP9 executable (VFP-dependent); "
+           "the no-VFP graceful-failure path is covered by test_run_prg_missing_file")
 def test_run_prg_error_fields_present(tmp_path):
     """run_prg data payload must carry errFile/errContent/hung keys."""
     fp = str(tmp_path / "fake.prg")
