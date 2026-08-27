@@ -43,3 +43,10 @@ Prompt build VFP 9.0  Translator.txt
 
 # Local audit outputs (never commit real project audits)
 audit_report/
+
+# Sensitive anonymization artifacts (DBF_Anonymizer) — NEVER commit
+dictionary.sqlite3
+*_dict/
+*_dictionary/
+*_recovered/
+*.sqlite3
