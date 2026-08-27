@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Visual FoxPro 9 SP2 language element",
+  "type": "object",
+  "required": ["id", "kind", "canonicalName", "dialect", "status"],
+  "properties": {
+    "id": {"type":"string"},
+    "kind": {"enum":["command","function","operator","directive","class","property","method","event","systemVariable","sysFunction","type","syntaxRule","environmentSetting"]},
+    "canonicalName": {"type":"string"},
+    "aliases": {"type":"array","items":{"type":"string"}},
+    "dialect": {"const":"microsoft.visual-foxpro.9.0.sp2"},
+    "status": {"enum":["VERIFIED_RUNTIME_AND_HELP","VERIFIED_HELP","VERIFIED_RUNTIME","BACKWARD_COMPATIBLE","VERSION_DEPENDENT","PROJECT_ENVIRONMENT_DEPENDENT","HEURISTIC","UNVERIFIED","INVALID_FOR_VFP9SP2"]},
+    "syntax": {"type":"array","items":{"type":"string"}},
+    "introducedIn": {"type":["string","null"]},
+    "changedIn": {"type":"array","items":{"type":"string"}},
+    "backwardCompatibleOnly": {"type":"boolean"},
+    "semanticTags": {"type":"array","items":{"type":"string"}},
+    "environmentDependencies": {"type":"array","items":{"type":"string"}},
+    "sources": {"type":"array","items":{"type":"string"}},
+    "runtime": {"type":"object"},
+    "notes": {"type":"array","items":{"type":"string"}}
+  },
+  "additionalProperties": true
+}
