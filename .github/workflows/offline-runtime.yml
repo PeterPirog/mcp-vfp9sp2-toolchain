@@ -31,15 +31,16 @@ jobs:
       - name: Build bundle (network allowed on build plane)
         run: |
           python -m pip install --upgrade pip
-          powershell -ExecutionPolicy Bypass -File scripts\build_offline_bundle.ps1 -PythonVersions 3.10,3.12,3.14
-
+          powershell -ExecutionPolicy Bypass -File scripts\build_offline_bundle.ps1 -PythonExe python
       - name: Verify bundle structure (app/ canonical root)
         run: |
           $b = "dist\mcp-vfp9sp2-toolchain-offline"
-          foreach ($p in @("app\config.json", "app\src", "app\tools\dbfbridge", "app\tools\dbf_anonymizer", "app\runtime\runtime-dependencies.json", "app\runtime\test-dependencies.json", "wheels", "test-wheels", "manifests\bundle-manifest.json", "licenses\THIRD_PARTY_NOTICES.md", "install-offline.ps1")) {
-              if (-not (Test-Path (Join-Path $b $p))) { Write-Error "missing bundle part: $p"; exit 1 }
+          $parts = @("app/config.json","app/src","app/tools/dbfbridge","app/tools/dbf_anonymizer","app/runtime/runtime-dependencies.json","app/runtime/test-dependencies.json","wheels","test-wheels","manifests/bundle-manifest.json","licenses/THIRD_PARTY_NOTICES.md","install-offline.ps1")
+          foreach ($p in $parts) {
+              $full = Join-Path $b ($p -replace '/', '\')
+              if (-not (Test-Path $full)) { Write-Error "missing bundle part: $p"; exit 1 }
           }
-          if (Test-Path "dist\mcp-vfp9sp2-toolchain-offline\knowledge") { Write-Error "ambiguous knowledge/ sibling exists"; exit 1 }
+          if (Test-Path (Join-Path $b "knowledge")) { Write-Error "ambiguous knowledge/ sibling exists"; exit 1 }
           Write-Host "bundle structure OK"
 
       - name: Upload bundle artifact
@@ -49,7 +50,7 @@ jobs:
           path: dist/mcp-vfp9sp2-toolchain-offline
           include-hidden-files: true
 
-  offline-test-3.10:
+  offline-test-py310:
     name: Offline install + DBF read (py3.10, artifact only)
     needs: build-bundle
     runs-on: windows-latest
@@ -82,7 +83,7 @@ jobs:
           $app = Join-Path $root "app"
           python -c "import sys, os; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
 
-  offline-test-3.12:
+  offline-test-py312:
     name: Offline install + DBF read (py3.12, artifact only)
     needs: build-bundle
     runs-on: windows-latest
@@ -115,7 +116,7 @@ jobs:
           $app = Join-Path $root "app"
           python -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
 
-  offline-test-3.14:
+  offline-test-py314:
     name: Offline install + DBF read (py3.14, artifact only)
     needs: build-bundle
     runs-on: windows-latest
