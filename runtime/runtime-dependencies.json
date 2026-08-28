@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "targetPlatform": "windows",
+  "supportedPython": ["3.10", "3.12", "3.14"],
+  "resolvedAt": "2026-08-27",
+  "note": "Pinned, reproducible runtime dependency set for the offline bundle. Pure-Python wheels are shared across all three Pythons; orjson is the only per-ABI wheel. polars_runtime_32 is cp310-abi3 and serves 3.10/3.12/3.14 from one file. Verified with `pip download --only-binary=:all: --python-version <X> --platform win_amd64` for each supported Python.",
+  "dependencies": [
+    {
+      "name": "dbfread",
+      "version": "2.0.7",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/project/dbfread/2.0.7/",
+      "purpose": "pure-Python DBF/FPT reader",
+      "requiredBy": ["dbfbridge (exporter/reader.py, exporter/writer.py, importer/reconstruct.py, verifier.py)"],
+      "nativeBinary": false,
+      "runtimeMandatory": true,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "dbfread-2.0.7-py2.py3-none-any.whl": "f604def58c59694fa0160d7be5d0b8d594467278d2bb6a47d46daf7162c84cec"
+      }
+    },
+    {
+      "name": "dbf",
+      "version": "0.99.11",
+      "license": "MIT",
+      "source": "https://pypi.org/project/dbf/0.99.11/",
+      "purpose": "pure-Python DBF writer (reconstruction)",
+      "requiredBy": ["dbfbridge (importer/writer.py, lazy)"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "dbf-0.99.11-py3-none-any.whl": "0caeaeee80c486b7422a6e25cdc7da61dd0007fe652a005b2bdf1b1dd0b18e00"
+      }
+    },
+    {
+      "name": "aenum",
+      "version": "3.1.17",
+      "license": "BSD-2-Clause",
+      "source": "https://pypi.org/project/aenum/3.1.17/",
+      "purpose": "dependency of dbf 0.99.11",
+      "requiredBy": ["dbf"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "aenum-3.1.17-py3-none-any.whl": "8b883a37a04e74cc838ac442bdd28c266eae5bbf13e1342c7ef123ed25230139"
+      }
+    },
+    {
+      "name": "openpyxl",
+      "version": "3.1.5",
+      "license": "MIT",
+      "source": "https://pypi.org/project/openpyxl/3.1.5/",
+      "purpose": "XLSX reading (reconstruction)",
+      "requiredBy": ["dbfbridge (importer/readers.py, lazy)"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "openpyxl-3.1.5-py2.py3-none-any.whl": "5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2"
+      }
+    },
+    {
+      "name": "et_xmlfile",
+      "version": "2.0.0",
+      "license": "MIT",
+      "source": "https://pypi.org/project/et_xmlfile/2.0.0/",
+      "purpose": "dependency of openpyxl",
+      "requiredBy": ["openpyxl"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "et_xmlfile-2.0.0-py3-none-any.whl": "7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa"
+      }
+    },
+    {
+      "name": "xlsxwriter",
+      "version": "3.2.9",
+      "license": "BSD-3-Clause",
+      "source": "https://pypi.org/project/xlsxwriter/3.2.9/",
+      "purpose": "XLSX writing (export)",
+      "requiredBy": ["dbfbridge (converters.py, lazy)"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "xlsxwriter-3.2.9-py3-none-any.whl": "9a5db42bc5dff014806c58a20b9eae7322a134abb6fce3c92c181bfb275ec5b3"
+      }
+    },
+    {
+      "name": "orjson",
+      "version": "3.12.0",
+      "license": "Apache-2.0",
+      "source": "https://pypi.org/project/orjson/3.12.0/",
+      "purpose": "fast JSON (de)serialization speedup (dbfbridge falls back to stdlib json when absent)",
+      "requiredBy": ["dbfbridge (converters.py, lazy)"],
+      "nativeBinary": true,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "orjson-3.12.0-cp310-cp310-win_amd64.whl": "3bb17a06f9bd15237b3216c044209fe92597379124018cfc196fbb846cde64df",
+        "orjson-3.12.0-cp312-cp312-win_amd64.whl": "010811c1b69773450a01cef97727a67b223242f350b77d4ca000e59a9ef2155a",
+        "orjson-3.12.0-cp314-cp314-win_amd64.whl": "0b1ac5bf6609b2716c7954011c5fef6254922df029f45d032ee4ebf5d363cbed"
+      }
+    },
+    {
+      "name": "polars",
+      "version": "1.44.1",
+      "license": "MIT",
+      "source": "https://pypi.org/project/polars/1.44.1/",
+      "purpose": "tabular conversion (large-table CSV paths)",
+      "requiredBy": ["dbfbridge (converters.py, lazy)"],
+      "nativeBinary": false,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "polars-1.44.1-py3-none-any.whl": "1fa62fc1c88fba77a68b28291b5aabdd69e5f38b34e59721a064ae3169b59bb5"
+      }
+    },
+    {
+      "name": "polars_runtime_32",
+      "version": "1.44.1",
+      "license": "MIT",
+      "source": "https://pypi.org/project/polars-runtime-32/1.44.1/",
+      "purpose": "native runtime of polars (cp310-abi3, covers 3.10/3.12/3.14)",
+      "requiredBy": ["polars"],
+      "nativeBinary": true,
+      "runtimeMandatory": false,
+      "runtimeNetworkRequired": false,
+      "hashes": {
+        "polars_runtime_32-1.44.1-cp310-abi3-win_amd64.whl": "159334184e6fbb074c9f4692221ea19970a5e2bed2a479f9d7bdb00b7f3eedb9"
+      }
+    }
+  ]
+}

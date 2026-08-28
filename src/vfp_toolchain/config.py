@@ -44,6 +44,11 @@ def load_config(override_root=None):
     """
     key = override_root or "_default"
     path = config_path(override_root)
+    # A MISSING config.json is a legitimate bare-host state (not an error);
+    # a PRESENT but unparseable file is a real problem the caller can surface.
+    if not os.path.isfile(path):
+        _last_error[key] = None
+        return {}
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)

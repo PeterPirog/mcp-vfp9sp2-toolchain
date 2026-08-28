@@ -38,6 +38,7 @@ Do not claim full application support when only the knowledge contract exists.
 | Pure-read designer parser | MCP target architecture | not implemented as complete normalized reader | MUST work without VFP | ROADMAP / HIGH PRIORITY |
 | Capability discovery | `docs/mcp_capability_model.json` | `vfp_capabilities` implemented in Core Service + CLI + OpenCode (PURE_READ, no VFP launch) | PURE_READ | IMPLEMENTED PURE_READ |
 | Transport-neutral Python service layer | `docs/MCP_TARGET_ARCHITECTURE.md` | `src/vfp_toolchain` core service + backends; CLI/OpenCode are thin adapters; `vfp_detect` routed through core | no VFP required for core dispatch | IMPLEMENTED (foundation) |
+| Offline Python runtime closure | `docs/OFFLINE_RUNTIME.md`, `runtime/runtime-dependencies.json` | pinned wheelhouse + SHA256 lock + `--no-index` installer + offline verification + clean-venv install test | no VFP, no network at runtime | IMPLEMENTED |
 | OpenCode vfp_detect through Core | MCP target architecture | `tools/vfp.ts` `vfp_detect` is a thin adapter over `vfp_driver.py detect` (no duplicated walk) | PURE_READ | IMPLEMENTED PURE_READ |
 | dbfbridge adapter | `tools/VENDORED_DEPENDENCIES.json` | `DBFBridgeBackend` wraps the pinned vendored public API | no VFP | IMPLEMENTED |
 | MCP server | MCP target architecture | intentionally not implemented yet | Windows target | FUTURE ROADMAP |

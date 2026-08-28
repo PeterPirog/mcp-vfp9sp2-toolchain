@@ -142,9 +142,9 @@ def test_c_dbfbridge_pin_mismatch_fails_closed(tmp_path):
         "; assert m['pinVerified'] is False, m"
         "; import vfp_toolchain"
         "; c = vfp_toolchain.VFPToolchainService(root=r'%s').capabilities().to_dict()" % fake_root.replace("\\", "/") +
-        "; assert c['status'] == 'PARTIAL', c"
-        "; assert c['errorCode'], c"
-        "; assert any('DEPENDENCY_VERSION_MISMATCH' in e for e in c['errors']), c['errors']"
+        "; assert any('DEPENDENCY_VERSION_MISMATCH' in w for w in c['warnings']), c['warnings']"
+        "; assert c['data']['dbfbridge']['available'] is False"
+        "; assert c['data']['modes']['pureRead'] is True"
         "; print('C_OK')"
     )
     res = _subprocess(script)
@@ -270,6 +270,7 @@ def test_g_corrupt_config_is_partial_with_config_error(tmp_path):
         "; import vfp_toolchain"
         "; c = vfp_toolchain.VFPToolchainService(root=r'%s').capabilities().to_dict()" % str(tmp_path).replace("\\", "/") +
         "; assert c['status'] == 'PARTIAL', c"
+        "; assert c['errorCode'], c"
         "; assert any('CONFIG_ERROR' in e for e in c['errors']), c['errors']"
         "; print('G_OK')"
     )

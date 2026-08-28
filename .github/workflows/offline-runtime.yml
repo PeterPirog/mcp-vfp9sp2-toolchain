@@ -1,0 +1,198 @@
+name: offline-runtime
+
+on:
+  push:
+    branches: [ main, feature/offline-runtime-closure ]
+  pull_request:
+
+# The offline jobs below use ONLY the locally built wheelhouse artifacts.
+# No `pip install` without `--no-index`, no index-url, no PyPI fallback.
+# A static guard test (tests/test_offline_ci_artifact_only.py) asserts that
+# the offline-test jobs never reference PyPI or network installation.
+
+jobs:
+  build-bundle:
+    name: Build offline bundle (wheels + app)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12 (build machine only)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build bundle (network allowed on build plane)
+        run: |
+          python -m pip install --upgrade pip
+          powershell -ExecutionPolicy Bypass -File scripts\build_offline_bundle.ps1 -PythonExe python
+      - name: Verify bundle structure (app/ canonical root)
+        run: |
+          $b = "dist\mcp-vfp9sp2-toolchain-offline"
+          $parts = @("app/config.json","app/src","app/tools/dbfbridge","app/tools/dbf_anonymizer","app/runtime/runtime-dependencies.json","app/runtime/test-dependencies.json","wheels","test-wheels","manifests/bundle-manifest.json","licenses/THIRD_PARTY_NOTICES.md","install-offline.ps1")
+          foreach ($p in $parts) {
+              $full = Join-Path $b ($p -replace '/', '\')
+              if (-not (Test-Path $full)) { Write-Error "missing bundle part: $p"; exit 1 }
+          }
+          if (Test-Path (Join-Path $b "knowledge")) { Write-Error "ambiguous knowledge/ sibling exists"; exit 1 }
+          Write-Host "bundle structure OK"
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-bundle
+          path: dist/mcp-vfp9sp2-toolchain-offline
+          include-hidden-files: true
+
+  offline-test-py310:
+    name: Offline install + DBF read (py3.10, artifact only)
+    needs: build-bundle
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: offline-bundle
+          path: bundle
+
+      - name: Set up Python 3.10 (exact target interpreter)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Offline install (local wheelhouse only, --no-index)
+        run: |
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
+      - name: Offline runtime verification (bundle app/ root)
+        run: |
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+      - name: Pure-read DBF smoke test (no network)
+        run: |
+          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
+          $app = Join-Path $root "app"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys, os; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+
+  offline-test-py312:
+    name: Offline install + DBF read (py3.12, artifact only)
+    needs: build-bundle
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: offline-bundle
+          path: bundle
+
+      - name: Set up Python 3.12 (exact target interpreter)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Offline install (local wheelhouse only, --no-index)
+        run: |
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
+      - name: Offline runtime verification (bundle app/ root)
+        run: |
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+      - name: Pure-read DBF smoke test (no network)
+        run: |
+          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
+          $app = Join-Path $root "app"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+
+  offline-test-py314:
+    name: Offline install + DBF read (py3.14, artifact only)
+    needs: build-bundle
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: offline-bundle
+          path: bundle
+
+      - name: Set up Python 3.14 (exact target interpreter)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Offline install (local wheelhouse only, --no-index)
+        run: |
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
+      - name: Offline runtime verification (bundle app/ root)
+        run: |
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+      - name: Pure-read DBF smoke test (no network)
+        run: |
+          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
+          $app = Join-Path $root "app"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+
+  repo-tests:
+    name: Repository test suite (3.12)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies (repository CI plane)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest dbfread
+      - name: Run repository tests
+        run: python -m pytest tests -q

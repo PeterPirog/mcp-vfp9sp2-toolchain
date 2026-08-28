@@ -105,11 +105,12 @@ DBF_Anonymizer 0.3.0 declares exactly the same dbfbridge commit the toolchain
 vendors — one shared dbfbridge, never two. The runtime never downloads any of
 these; updates are a maintainer operation.
 
-> **OFFLINE_DEPENDENCY_CLOSURE = NEXT PHASE.** The vendored dbfbridge snapshot
-> still imports the third-party `dbfread` package (installed via pip), so the
-> dependency closure is not yet fully offline. Closing that gap — vendoring
-> `dbfread` (or removing the import) plus a SHA256 manifest per snapshot — is
-> the next phase, not part of PR8.
+**OFFLINE_DEPENDENCY_CLOSURE = DONE (Phase 2).** The vendored dbfbridge
+snapshot's third-party imports (`dbfread` and the optional lazy set) are now a
+pinned, hash-verified, `--no-index` installable wheelhouse:
+`runtime/runtime-dependencies.json` + `scripts/build_offline_bundle.ps1` +
+`scripts/install_offline.ps1` + `scripts/verify_offline_runtime.py`. See
+`docs/OFFLINE_RUNTIME.md`.
 
 **License/provenance.** dbfbridge ships its upstream `LICENSE` in the vendored
 copy. The DBF_Anonymizer upstream repo has no LICENSE file at the pinned

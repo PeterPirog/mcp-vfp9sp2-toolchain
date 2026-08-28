@@ -275,6 +275,13 @@ Do not duplicate this logic inside `mcp-vfp9sp2-toolchain`. Integrate it through
 
 The production/offline toolchain must not `pip install` or `git clone` dependencies at request time.
 
+**Status (Phase 2):** the Python runtime closure is implemented — a pinned,
+SHA256-verified wheelhouse (`runtime/runtime-dependencies.json`), a
+maintainer build script (`scripts/build_offline_bundle.ps1`), an offline
+installer using `pip --no-index --find-links` only
+(`scripts/install_offline.ps1`), and an offline verification
+(`scripts/verify_offline_runtime.py`). See `docs/OFFLINE_RUNTIME.md`.
+
 Preferred dependency layout:
 
 ```text
