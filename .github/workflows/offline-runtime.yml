@@ -71,17 +71,25 @@ jobs:
 
       - name: Offline install (local wheelhouse only, --no-index)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe python -AlsoTestRunner
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
       - name: Offline runtime verification (bundle app/ root)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          python (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
       - name: Pure-read DBF smoke test (no network)
         run: |
           $root = "bundle\mcp-vfp9sp2-toolchain-offline"
           $app = Join-Path $root "app"
-          python -c "import sys, os; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys, os; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
 
   offline-test-py312:
     name: Offline install + DBF read (py3.12, artifact only)
@@ -104,17 +112,25 @@ jobs:
 
       - name: Offline install (local wheelhouse only, --no-index)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe python -AlsoTestRunner
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
       - name: Offline runtime verification (bundle app/ root)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          python (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
       - name: Pure-read DBF smoke test (no network)
         run: |
           $root = "bundle\mcp-vfp9sp2-toolchain-offline"
           $app = Join-Path $root "app"
-          python -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
 
   offline-test-py314:
     name: Offline install + DBF read (py3.14, artifact only)
@@ -137,17 +153,25 @@ jobs:
 
       - name: Offline install (local wheelhouse only, --no-index)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe python -AlsoTestRunner
+          # CLEAN venv so no preinstalled package conflicts; install comes
+          # exclusively from the local wheelhouse (--no-index, PIP_NO_INDEX=1).
+          python -m venv offline_venv
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          $env:PIP_NO_INDEX = "1"
+          & powershell -ExecutionPolicy Bypass -File (Join-Path $root "install-offline.ps1") -BundleRoot $root -PythonExe $venvPy -AlsoTestRunner
+          $env:PIP_NO_INDEX = $null
       - name: Offline runtime verification (bundle app/ root)
         run: |
-          $root = "bundle\mcp-vfp9sp2-toolchain-offline"
-          python (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          $root = Join-Path $PWD "bundle\mcp-vfp9sp2-toolchain-offline"
+          & $venvPy (Join-Path $root "scripts\verify_offline_runtime.py") --root (Join-Path $root "app")
       - name: Pure-read DBF smoke test (no network)
         run: |
           $root = "bundle\mcp-vfp9sp2-toolchain-offline"
           $app = Join-Path $root "app"
-          python -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
+          $venvPy = Join-Path $PWD "offline_venv\Scripts\python.exe"
+          & $venvPy -c "import sys; sys.path.insert(0, r'$app\src'); sys.path.insert(0, r'$app'); from vfp_toolchain.service import VFPToolchainService; cap = VFPToolchainService(root=r'$app').capabilities(); d = cap.to_dict(); assert d['ok'], d; assert d['data']['modes']['pureRead'] is True; print('OFFLINE PURE READ OK')"
 
   repo-tests:
     name: Repository test suite (3.12)
