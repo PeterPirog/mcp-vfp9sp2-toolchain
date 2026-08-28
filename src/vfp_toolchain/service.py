@@ -250,9 +250,9 @@ class VFPToolchainService(object):
         Never writes to the source tree.
         """
         requires = list(OPERATION_CAPABILITIES.get("vfp_detect",
-                                                   (Capability.PURE_READ.value,)))
+                                                    (Capability.PURE_READ.value,)))
         from .backends import PurePythonBackend
-        data, warnings = PurePythonBackend().detect_project(directory)
+        data, warnings = PurePythonBackend(root=self._root).detect_project(directory)
         if data is None:
             return OperationResult.failure(
                 EC_DEPENDENCY_NOT_AVAILABLE,

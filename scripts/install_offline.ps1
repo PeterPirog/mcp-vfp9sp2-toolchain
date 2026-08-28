@@ -6,26 +6,36 @@
 #       --no-index
 #       --find-links <LOCAL_WHEELHOUSE>
 # There is NO fallback to PyPI. If a required wheel is missing, the install
-# FAILS with OFFLINE_DEPENDENCY_MISSING.
+# FAILS with OFFLINE_DEPENDENCY_MISSING (it never "tries the internet").
 #
-# It then verifies the installed runtime with scripts/verify_offline_runtime.py
-# (import closure + versions + public APIs + VFPToolchainService().capabilities()
-# without VFP9/FoxBin2Prg/internet).
+# Interpreter selection is EXACT and fail-closed:
+#   3.10 -> wheels/310      3.12 -> wheels/312      3.14 -> wheels/314
+# A missing exact-tag wheelhouse is OFFLINE_DEPENDENCY_MISSING - the
+# installer NEVER substitutes a different interpreter directory (ABI-specific
+# wheels make that unsafe).
+#
+# Python invocation is unambiguous (separated executable + launcher args,
+# safe with spaces in paths):
+#   -PythonExe python
+#   -PythonExe py -PythonArgs "-3.12"
+#   -PythonExe "C:\Program Files\Python 3.12\python.exe"
 #
 # Usage (from the bundle root):
 #   powershell -ExecutionPolicy Bypass -File install-offline.ps1
-#   powershell -ExecutionPolicy Bypass -File install-offline.ps1 -Python "py -3.12"
+#   powershell -ExecutionPolicy Bypass -File install-offline.ps1 -PythonExe py -PythonArgs "-3.12"
 # =============================================================================
 
 [CmdletBinding()]
 param(
     [string]$BundleRoot = "",
-    [string]$Python = "python"
+    [string]$PythonExe = "python",
+    [string[]]$PythonArgs = @(),
+    [switch]$AlsoTestRunner
 )
-if (-not $BundleRoot) { $BundleRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path } }
-
+if (-not $BundleRoot) {
+    $BundleRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+}
 $ErrorActionPreference = "Stop"
-$NoNetwork = $true  # policy: this script must never reach the network
 
 function Fail([string]$code, [string]$message) {
     $obj = [ordered]@{ ok = $false; status = "FAIL"; errorCode = $code; error = $message }
@@ -33,62 +43,104 @@ function Fail([string]$code, [string]$message) {
     exit 1
 }
 
+function Invoke-Python([string[]]$PyArgs) {
+    # Single, unambiguous invocation helper (handles spaces in paths).
+    # Returns ONLY the numeric exit code. The child process stdout/stderr are
+    # routed to the console (Out-Host) so they never pollute the function's
+    # return value (a native command's output would otherwise be captured as
+    # pipeline objects and returned alongside the exit code).
+    & $PythonExe @PythonArgs @PyArgs 2>&1 | Out-Host
+    if ($LASTEXITCODE -eq $null) { return 0 }
+    return [int]$LASTEXITCODE
+}
+
 Write-Host "== install_offline (network FORBIDDEN) =="
+Write-Host "bundle    : $BundleRoot"
+Write-Host "python    : '$PythonExe' $($PythonArgs -join ' ')"
 
-$wheelsDir   = Join-Path $BundleRoot "wheels"
-$appDir      = Join-Path $BundleRoot "app"
-$verifyScript = Join-Path $BundleRoot "scripts\verify_offline_runtime.py"
-if (-not (Test-Path $verifyScript)) {
-    # verify script ships in app/scripts in some bundle layouts; fall back
-    $verifyScript = Join-Path $appDir "scripts\verify_offline_runtime.py"
+$wheelsDir  = Join-Path $BundleRoot "wheels"
+$testWheels = Join-Path $BundleRoot "test-wheels"
+$appDir     = Join-Path $BundleRoot "app"
+if (-not (Test-Path $wheelsDir))  { Fail "OFFLINE_DEPENDENCY_MISSING" "local wheelhouse not found: $wheelsDir" }
+if (-not (Test-Path $appDir))    { Fail "OFFLINE_DEPENDENCY_MISSING" "bundle app/ not found: $appDir" }
+
+# --- exact interpreter tag (fail-closed, no substitution) --------------------
+$verLine = (& $PythonExe @PythonArgs -c "import sys; print('%d%d' % (sys.version_info[0], sys.version_info[1]))").Trim()
+$ver = $verLine | Select-Object -Last 1
+if ($ver -notmatch '^\d{3}$') {
+    Fail "OFFLINE_DEPENDENCY_RESOLUTION_ERROR" "could not determine the target interpreter tag (got: '$ver')"
 }
-if (-not (Test-Path $wheelsDir)) {
-    Fail "OFFLINE_DEPENDENCY_MISSING" "local wheelhouse not found: $wheelsDir"
+$exactTagDir = Join-Path $wheelsDir $ver
+if (-not (Test-Path $exactTagDir)) {
+    Fail "OFFLINE_DEPENDENCY_MISSING" "no wheelhouse for CPython tag '$ver' (required: $exactTagDir). Exact-tag policy: the installer never substitutes another interpreter directory."
 }
+Write-Host "wheelhouse: $exactTagDir (exact tag $ver)"
 
-# Pick the wheelhouse subfolder for the running interpreter.
-$ver = (& $Python -c "import sys; print('%d%d' % (sys.version_info[0], sys.version_info[1]))").Trim()
-$candidate = Join-Path $wheelsDir $ver
-if (-not (Test-Path $candidate)) {
-    # a cp310-abi3 wheelhouse may be shared; try the lowest supported tag
-    $found = $false
-    foreach ($t in @($ver, "314", "312", "310")) {
-        if (Test-Path (Join-Path $wheelsDir $t)) { $candidate = Join-Path $wheelsDir $t; $found = $true; break }
-    }
-    if (-not $found) {
-        Fail "OFFLINE_DEPENDENCY_MISSING" "no wheelhouse for CPython tag $ver under $wheelsDir"
-    }
-    Write-Host "NOTE: using wheelhouse '$candidate' for CPython $ver"
-}
-
-Write-Host "wheelhouse: $candidate"
-Write-Host "python    : $Python"
-
-# --- hash-verify the wheels BEFORE installing --------------------------------
-$manifest = Get-Content (Join-Path $appDir "runtime\runtime-dependencies.json") -Raw | ConvertFrom-Json
+# --- load the lock manifest ---------------------------------------------------
+$manifestPath = Join-Path $appDir "runtime\runtime-dependencies.json"
+if (-not (Test-Path $manifestPath)) { Fail "OFFLINE_RUNTIME_INCOMPLETE" "lock manifest not found in app/: $manifestPath" }
+$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 $locked = @{}
 foreach ($dep in $manifest.dependencies) {
     foreach ($key in $dep.hashes.PSObject.Properties) { $locked[$key.Name] = $key.Value }
 }
-$hashBad = @()
-$files = Get-ChildItem $candidate -Filter *.whl
-foreach ($f in $files) {
-    $expected = $locked[$f.Name]
-    if (-not $expected) { $hashBad += $f.Name; continue }
-    $actual = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
-    if ($actual -ne $expected.ToLower()) { $hashBad += $f.Name }
-}
-if ($hashBad.Count -gt 0) {
-    Fail "OFFLINE_DEPENDENCY_HASH_MISMATCH" ("corrupt or unlisted wheels: " + ($hashBad -join ', '))
-}
-Write-Host "SHA256 verification: OK"
 
-# --- install from the LOCAL wheelhouse ONLY (no index, no network) ----------
-$pipArgs = @(
-    "-m", "pip", "install",
-    "--no-index",
-    "--find-links", $candidate,
-    "--upgrade",
+# --- REQUIRED-SET verification (fail-closed) ---------------------------------
+# 1) every locked wheel that applies to this tag must be present,
+# 2) every present wheel must be listed in the lock with a matching SHA256,
+# 3) unlisted wheels are a failure (a locked set is a locked set).
+function Wheel-MatchesTag([string]$filename, [string]$tag) {
+    $base = [IO.Path]::GetFileNameWithoutExtension($filename)
+    $parts = $base.Split('-')
+    if ($parts.Length -lt 5) { return $false }
+    $pyTags  = $parts[-3].Split('.')
+    $abiTags = $parts[-2].Split('.')
+    $plat    = $parts[-1].Split('.')
+    if (-not ('any' -in $plat -or 'win_amd64' -in $plat)) { return $false }
+    $cp = 'cp' + $tag
+    if ('py3' -in $pyTags -or 'py2' -in $pyTags -or 'any' -in $pyTags) { return $true }
+    if ($cp -in $pyTags) { return $true }
+    if ('abi3' -in $abiTags) {
+        $floor = @($pyTags | Where-Object { $_ -like 'cp*' })
+        if ($floor.Count -gt 0 -and $floor[0].Substring(2) -match '^\d+$' -and $tag -match '^\d+$') {
+            return [int]$floor[0].Substring(2) -le [int]$tag
+        }
+        return $true
+    }
+    return $false
+}
+
+$problems = @()
+$expected = @{}
+foreach ($name in $locked.Keys) {
+    if (Wheel-MatchesTag $name $ver) { $expected[$name] = $locked[$name] }
+}
+$actual = @{}
+foreach ($f in Get-ChildItem $exactTagDir -Filter *.whl) {
+    $actual[$f.Name] = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
+}
+# required - actual  -> missing (OFFLINE_DEPENDENCY_MISSING)
+foreach ($name in $expected.Keys) {
+    if (-not $actual.ContainsKey($name)) {
+        $problems += [ordered]@{ file = $name; problem = "missing wheel"; code = "OFFLINE_DEPENDENCY_MISSING" }
+    }
+}
+foreach ($name in $actual.Keys) {
+    if ($expected.ContainsKey($name)) {
+        if ($actual[$name] -ne $expected[$name].ToLower()) {
+            $problems += [ordered]@{ file = $name; problem = "hash mismatch"; code = "OFFLINE_DEPENDENCY_HASH_MISMATCH"; expected = $expected[$name]; actual = $actual[$name] }
+        }
+    } else {
+        $problems += [ordered]@{ file = $name; problem = "unlisted wheel (not in lock)"; code = "OFFLINE_DEPENDENCY_HASH_MISMATCH" }
+    }
+}
+if ($problems.Count -gt 0) {
+    Fail "OFFLINE_DEPENDENCY_HASH_MISMATCH" ($problems | ConvertTo-Json -Depth 4)
+}
+Write-Host ("SHA256 verification: OK ({0} wheels; exact expected set present, all hashes match the lock)" -f $actual.Count)
+
+# --- install from the LOCAL wheelhouse ONLY (no index, no network) -----------
+$specs = @(
     "dbfread==2.0.7",
     "dbf==0.99.11",
     "aenum==3.1.17",
@@ -99,26 +151,47 @@ $pipArgs = @(
     "polars==1.44.1",
     "polars_runtime_32==1.44.1"
 )
-Write-Host "== $Python $($pipArgs -join ' ')"
-& $Python @pipArgs
-if ($LASTEXITCODE -ne 0) {
-    Fail "OFFLINE_DEPENDENCY_MISSING" "pip --no-index install failed (exit $LASTEXITCODE) - a required wheel is missing from the local wheelhouse"
+$pipInstall = @("-m", "pip", "install", "--no-index", "--find-links", $exactTagDir) + $specs
+Write-Host "== $($PythonExe) $($PythonArgs -join ' ') $($pipInstall -join ' ')"
+$rc = Invoke-Python $pipInstall
+if ($rc -ne 0) {
+    Fail "OFFLINE_DEPENDENCY_MISSING" "pip --no-index install failed (exit $rc) - a required wheel is missing from the local wheelhouse"
+}
+
+# --- optional: test runner from the local TEST wheelhouse (still no index) ---
+if ($AlsoTestRunner) {
+    if (-not (Test-Path $testWheels)) { Fail "OFFLINE_DEPENDENCY_MISSING" "local test-wheelhouse not found: $testWheels" }
+    $tTagDir = Join-Path $testWheels $ver
+    if (-not (Test-Path $tTagDir)) {
+        Fail "OFFLINE_DEPENDENCY_MISSING" "no test wheelhouse for CPython tag '$ver' (required: $tTagDir)"
+    }
+    # NOTE: build the argument list in a VARIABLE first. In an argument
+    # position `@(array) + $more` is parsed as SPLATTING and drops $more.
+    $testPipArgs = @("-m", "pip", "install", "--no-index", "--find-links", $tTagDir, "pytest==9.1.1")
+    $rc = Invoke-Python $testPipArgs
+    if ($rc -ne 0) {
+        Fail "OFFLINE_DEPENDENCY_MISSING" "test-runner install from local test wheelhouse failed (exit $rc)"
+    }
+    Write-Host "test runner installed from local test wheelhouse (--no-index)"
 }
 
 # --- verify the installed offline runtime ------------------------------------
+$verifyScript = Join-Path $BundleRoot "scripts\verify_offline_runtime.py"
+if (-not (Test-Path $verifyScript)) { $verifyScript = Join-Path $appDir "scripts\verify_offline_runtime.py" }
 if (Test-Path $verifyScript) {
-    & $Python $verifyScript --root $appDir
-    if ($LASTEXITCODE -ne 0) {
-        Fail "OFFLINE_RUNTIME_INCOMPLETE" "offline runtime verification failed after install"
-    }
+    $rc = Invoke-Python @($verifyScript, "--root", $appDir)
+    if ($rc -ne 0) { Fail "OFFLINE_RUNTIME_INCOMPLETE" "offline runtime verification failed after install" }
 }
 
 $ok = [ordered]@{
     ok = $true
     status = "PASS"
-    installedFrom = $candidate
-    networkUsed = $NoNetwork -eq $false
-    note = "installed exclusively from the local wheelhouse (--no-index)"
+    networkPolicy = "FORBIDDEN"
+    pipNoIndex = $true
+    wheelhouse = $exactTagDir
+    verifiedHashes = $true
+    exactTag = $ver
+    note = "installed exclusively from the local wheelhouse (--no-index --find-links); no PyPI, no network"
 }
 $ok | ConvertTo-Json
 Write-Host "OFFLINE INSTALL OK"

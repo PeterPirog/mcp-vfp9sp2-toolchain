@@ -67,13 +67,37 @@ version resolves on Windows for 3.10, 3.12 and 3.14.
 | polars / polars_runtime_32 | MIT | https://pypi.org/project/polars |
 | aenum | BSD-2-Clause | https://pypi.org/project/aenum |
 
+## Test-runner dependency closure (separate lock)
+
+Executing the pytest suite is a TEST plane, not a runtime one. It is locked
+in a **distinct** manifest `runtime/test-dependencies.json`:
+
+| name | version | license |
+|---|---|---|
+| pytest | 9.1.1 | MIT |
+| pluggy | 1.6.0 | MIT |
+| iniconfig | 2.3.0 | BSD-2-Clause |
+| packaging | 26.3 | BSD-2-Clause / Apache-2.0 |
+| pygments | 2.21.0 | BSD-2-Clause |
+| colorama | 0.4.6 | BSD-3-Clause |
+
+These packages are NOT imported by `vfp_toolchain` at runtime and must not
+be moved into the runtime manifest. The builder downloads them into
+`test-wheels/<py>/`; the installer only touches that wheelhouse with
+`-AlsoTestRunner`, still under `--no-index`.
+
 ## Strategy
 
 - `dbfbridge` + `DBF_Anonymizer` remain **vendored** (Phase 1 decision, unchanged).
 - Everything above goes into a **pinned offline wheelhouse**
-  (`runtime/wheels/` inside the built bundle, never committed to Git).
+  (`wheels/<py>/` and `test-wheels/<py>/` inside the built bundle, never
+  committed to Git).
 - `runtime/runtime-dependencies.json` (committed) is the machine-readable
-  lock: exact versions + SHA256 per wheel + hashes of the vendored trees.
+  RUNTIME lock: exact versions + SHA256 per wheel;
+  `runtime/test-dependencies.json` is the machine-readable TEST-RUNNER lock.
+- The default supported Python list comes from
+  `runtime/runtime-dependencies.json` → `supportedPython` (one source of
+  truth; `-PythonVersions` is an explicit override, validated before pip).
 - `scripts/build_offline_bundle.ps1` (maintainer, network allowed) resolves
   and verifies; `scripts/install_offline.ps1` (target machine, network
   FORBIDDEN) uses `pip --no-index --find-links <wheelhouse>` only.

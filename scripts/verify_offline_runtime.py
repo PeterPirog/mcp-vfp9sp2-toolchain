@@ -132,7 +132,32 @@ def main(argv=None):
     check("versions_match_lock", not version_problems,
           version_problems or version_info or None)
 
-    # 5. capabilities() without VFP
+    # 5. real configuration + mandatory knowledge files in the root.
+    # A canonical runtime root MUST contain config.json and every
+    # knowledge.mandatory path. Missing config => not a real runtime root.
+    config_path = os.path.join(root, "config.json")
+    check("config_json_present", os.path.isfile(config_path))
+    _cfg = None
+    missing_knowledge = []
+    if os.path.isfile(config_path):
+        import json as _json  # noqa: E402
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                _cfg = _json.load(f)
+        except (OSError, ValueError) as e:
+            check("config_json_parsable", False, str(e))
+        if isinstance(_cfg, dict):
+            mand = (_cfg.get("knowledge") or {}).get("mandatory") or []
+            for rel in mand:
+                p = os.path.join(root, *rel.split("/"))
+                if not os.path.isfile(p):
+                    missing_knowledge.append(rel)
+    check("knowledge_mandatory_present", not missing_knowledge,
+          missing_knowledge or None)
+    dialect = (_cfg or {}).get("target", {}).get("dialect") if _cfg else None
+    check("dialect", dialect == "microsoft.visual-foxpro.9.0.sp2", dialect)
+
+    # 6. capabilities() without VFP
     from vfp_toolchain.service import VFPToolchainService  # noqa: E402
     cap = VFPToolchainService(root=root).capabilities().to_dict()
     check("capabilities_ok", cap["ok"] is True, cap.get("errorCode"))

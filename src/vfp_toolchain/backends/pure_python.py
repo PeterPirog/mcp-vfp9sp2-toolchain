@@ -29,17 +29,24 @@ class PurePythonBackend(object):
     name = "pure_python"
     backend = BACKEND_PURE_PYTHON
 
+    def __init__(self, root=None):
+        # root: canonical toolchain root (repo or bundle app/) — overrides the
+        # module-relative resolution so a bundle app/ is self-contained.
+        self._root = root
+
     def status(self):
         """Availability report (always available — pure Python stdlib)."""
         return {"available": True, "vendored": False, "backend": self.backend}
 
     # -- project detection (single source of truth, replaces tools/vfp.ts walk)
 
-    def detect_project(self, directory):
+    def detect_project(self, directory, root=None):
         """Detect VFP project artifacts under `directory` (PURE_READ).
 
         Uses config.artifacts.detect (config.json) as the single source of
         truth for extensions and config.defaultExcludes for the walk.
+        ``root`` (or the instance root) selects which config.json is read,
+        so a canonical bundle app/ root is self-contained.
         Never writes to the source tree.
 
         Returns (data, warnings) for the service layer to envelope.
@@ -47,11 +54,12 @@ class PurePythonBackend(object):
         _ensure_repo_on_path()
         import vfp_common  # legacy helper: should_skip_dir (canonical excludes)
 
+        effective_root = root or self._root
         directory = os.path.abspath(directory)
         if not os.path.isdir(directory):
             return None, ["directory not found: %s" % directory]
 
-        exts = config.detect_extensions()
+        exts = config.detect_extensions(effective_root)
         counts = {}
         total = 0
         cache_exists = False
