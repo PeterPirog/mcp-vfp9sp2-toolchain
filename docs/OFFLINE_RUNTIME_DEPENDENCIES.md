@@ -72,14 +72,22 @@ version resolves on Windows for 3.10, 3.12 and 3.14.
 Executing the pytest suite is a TEST plane, not a runtime one. It is locked
 in a **distinct** manifest `runtime/test-dependencies.json`:
 
-| name | version | license |
-|---|---|---|
-| pytest | 9.1.1 | MIT |
-| pluggy | 1.6.0 | MIT |
-| iniconfig | 2.3.0 | BSD-2-Clause |
-| packaging | 26.3 | BSD-2-Clause / Apache-2.0 |
-| pygments | 2.21.0 | BSD-2-Clause |
-| colorama | 0.4.6 | BSD-3-Clause |
+| name | version | license | applies to |
+|---|---|---|---|
+| pytest | 9.1.1 | MIT | 3.10 / 3.12 / 3.14 |
+| pluggy | 1.6.0 | MIT | 3.10 / 3.12 / 3.14 |
+| iniconfig | 2.3.0 | BSD-2-Clause | 3.10 / 3.12 / 3.14 |
+| packaging | 26.3 | BSD-2-Clause / Apache-2.0 | 3.10 / 3.12 / 3.14 |
+| pygments | 2.21.0 | BSD-2-Clause | 3.10 / 3.12 / 3.14 |
+| colorama | 0.4.6 | BSD-3-Clause | 3.10 / 3.12 / 3.14 |
+| tomli | 2.4.1 | MIT | **3.10 only** (`python_version < "3.11"`) |
+| exceptiongroup | 1.3.1 | Apache-2.0 | **3.10 only** (`python_version < "3.11"`) |
+| typing_extensions | 4.16.0 | PSF | **3.10 only** (via exceptiongroup) |
+
+The marker-gated rows carry a `marker` field in
+`runtime/test-dependencies.json`; the builder resolves them per tag and the
+wheelhouse verification enforces the exact per-tag set (tomli et al. are
+absent from the 3.12/3.14 test wheelhouses).
 
 These packages are NOT imported by `vfp_toolchain` at runtime and must not
 be moved into the runtime manifest. The builder downloads them into

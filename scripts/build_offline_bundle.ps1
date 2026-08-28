@@ -190,6 +190,11 @@ $runtimeSpecs = @(
     "polars==1.44.1"
     "polars_runtime_32==1.44.1"
 )
+# Test-runner lock: the non-marker-gated closure of pytest 9.1.1 is identical
+# for all tags; the marker-gated extras (tomli / exceptiongroup /
+# typing_extensions) apply only where the marker holds (3.10 here). Requesting
+# them as top-level specs for a non-applicable tag would defeat the marker, so
+# they are appended per-tag below.
 $testSpecs = @(
     "pytest==9.1.1"
     "pluggy==1.6.0"
@@ -198,15 +203,55 @@ $testSpecs = @(
     "pygments==2.21.0"
     "colorama==0.4.6"
 )
+# Marker-gated (python_version < "3.11") pytest deps + their < 3.13 dep;
+# reachable only on 3.10 of the supported set (verified per-tag).
+$PY310_TEST_EXTRA_SPECS = @("tomli==2.4.1", "exceptiongroup==1.3.1", "typing_extensions==4.16.0")
 
 $lockedHashes = @{}
 foreach ($dep in $manifestLock.dependencies) {
     foreach ($key in $dep.hashes.PSObject.Properties) { $lockedHashes[$key.Name] = $key.Value }
 }
+# Does a PEP 508 `python_version` marker hold for target tag $py (e.g. "3.10")?
+# Supports the comparisons pytest uses: < <= > >= == != with one version.
+function Marker-Holds([string]$marker, [string]$py) {
+    if ([string]::IsNullOrWhiteSpace($marker)) { return $true }
+    foreach ($part in ($marker -split 'and')) {
+        $p = $part.Trim()
+        if ($p -match 'python_version\s*([<>=!]+)\s*["'']?(\d+(?:\.\d+)*)["'']?') {
+            $op = $Matches[1]
+            $other = [version]($Matches[2])
+            $cur = [version]$py
+            $holds = switch ($op) {
+                "<"  { $cur -lt $other }
+                "<=" { $cur -le $other }
+                ">"  { $cur -gt $other }
+                ">=" { $cur -ge $other }
+                "==" { $cur -eq $other }
+                "!=" { $cur -ne $other }
+                default { return $false }
+            }
+            if (-not $holds) { return $false }
+        } elseif ($p -notmatch '^\s*$') {
+            # unknown marker form -> conservative: treat as holding (pure-python
+            # deps are safe); a reviewer can tighten this later.
+            $null
+        }
+    }
+    return $true
+}
+
 $testLock = Get-Content $testManifestPath -Raw | ConvertFrom-Json
-$testLockedHashes = @{}
-foreach ($dep in $testLock.dependencies) {
-    foreach ($key in $dep.hashes.PSObject.Properties) { $testLockedHashes[$key.Name] = $key.Value }
+# Per-tag test lock: a dependency with a python_version marker applies only to
+# the tags that marker selects (e.g. tomli only for 3.10).
+$testLockedHashesByTag = @{}
+foreach ($py in $resolvedPythonVersions) {
+    $tag = $py -replace '\.', ''
+    $h = @{}
+    foreach ($dep in $testLock.dependencies) {
+        if (-not (Marker-Holds $dep.marker $py)) { continue }
+        foreach ($key in $dep.hashes.PSObject.Properties) { $h[$key.Name] = $key.Value }
+    }
+    $testLockedHashesByTag[$tag] = $h
 }
 
 function Invoke-BuildPython([string[]]$PyPyArgs) {
@@ -244,8 +289,11 @@ foreach ($py in $resolvedPythonVersions) {
     if ($rc -ne 0) {
         Fail "OFFLINE_DEPENDENCY_MISSING" "pip download failed (runtime, python $py tag $pyTag, exit $rc)"
     }
+    # tomli + exceptiongroup: marker-gated (python_version < "3.11") -> 3.10
+    $thisTestSpecs = $testSpecs
+    if ($pyTag -eq "310") { $thisTestSpecs = @($testSpecs + $PY310_TEST_EXTRA_SPECS) }
     Write-Host "== pip download [test] targetPython=$py pythonTag=$pyTag platform=win_amd64 wheelhouse=$tsTarget"
-    $rc = Invoke-BuildPython ($commonArgs + $testSpecs + @("-d", $tsTarget))
+    $rc = Invoke-BuildPython ($commonArgs + $thisTestSpecs + @("-d", $tsTarget))
     if ($rc -ne 0) {
         Fail "OFFLINE_DEPENDENCY_MISSING" "pip download failed (test, python $py tag $pyTag, exit $rc)"
     }
@@ -287,7 +335,7 @@ function Verify-Wheelhouse([string]$dir, [hashtable]$locked, [string]$tag, [stri
 foreach ($py in $resolvedPythonVersions) {
     $pyTag = $py -replace '\.', ''
     Verify-Wheelhouse (Join-Path $wheelsDir $pyTag) $lockedHashes $pyTag "runtime/$pyTag"
-    Verify-Wheelhouse (Join-Path $testWheels $pyTag) $testLockedHashes $pyTag "test/$pyTag"
+    Verify-Wheelhouse (Join-Path $testWheels $pyTag) $testLockedHashesByTag[$pyTag] $pyTag "test/$pyTag"
 }
 
 # --- 4. assemble the CANONICAL runtime root under app/ -----------------------

@@ -41,6 +41,9 @@ material and provenance.
 | packaging | 26.3 | BSD-2-Clause / Apache-2.0 | https://pypi.org/project/packaging/ |
 | pygments | 2.21.0 | BSD-2-Clause | https://pypi.org/project/pygments/ |
 | colorama | 0.4.6 | BSD-3-Clause | https://pypi.org/project/colorama/ |
+| tomli | 2.4.1 | MIT | https://pypi.org/project/tomli/ |
+| exceptiongroup | 1.3.1 | Apache-2.0 | https://pypi.org/project/exceptiongroup/ |
+| typing_extensions | 4.16.0 | PSF | https://pypi.org/project/typing-extensions/ |
 
 ## Vendored project snapshots (Phase 1, unchanged)
 
@@ -59,6 +62,9 @@ material and provenance.
 
 - `FoxBin2Prg` is listed for attribution; it is not part of the offline
   runtime closure and must not be assumed present.
+- `tomli`, `exceptiongroup` and `typing_extensions` are marker-gated pytest
+  dependencies (`python_version < "3.11"` / the last via exceptiongroup), so
+  they ship only in the 3.10 test wheelhouse, not in 3.12/3.14.
 - Optional/lazy runtime packages (dbf, openpyxl, xlsxwriter, orjson, polars,
   polars_runtime_32) degrade only the specific operation that requires them if
   absent; they never disable Core Service or PURE READ.

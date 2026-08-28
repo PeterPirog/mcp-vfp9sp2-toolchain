@@ -35,6 +35,9 @@ param(
 if (-not $BundleRoot) {
     $BundleRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
 }
+# The installer passes wheelhouse paths to pip; make everything ABSOLUTE so
+# behavior is identical regardless of the process working directory (CI).
+$BundleRoot = (Resolve-Path $BundleRoot).Path
 $ErrorActionPreference = "Stop"
 
 function Fail([string]$code, [string]$message) {
