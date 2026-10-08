@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/provenance-record.schema.json",
+  "title": "Authoring and run provenance record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provenance_schema_version",
+    "authoring_mode",
+    "actor_class",
+    "base_commit",
+    "base_tree",
+    "candidate_tree",
+    "changed_path_digest"
+  ],
+  "properties": {
+    "provenance_schema_version": { "type": "integer", "const": 1 },
+    "authoring_mode": { "enum": ["MANUAL", "AUTONOMOUS", "HYBRID"] },
+    "actor_class": { "enum": ["HUMAN", "CODING_AGENT", "GENERATED", "TRUSTED_INTEGRATION"] },
+    "actor_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opaque_id"],
+      "properties": {
+        "opaque_id": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "base_commit": { "type": "string", "pattern": "^[0-9A-Fa-f]{40}$" },
+    "base_tree": { "type": "string", "pattern": "^[0-9A-Fa-f]{40}$" },
+    "candidate_tree": { "type": "string", "pattern": "^[0-9A-Fa-f]{40}$" },
+    "changed_path_digest": { "$ref": "#/$defs/sha256" },
+    "changed_path_count": { "type": "integer", "minimum": 0 },
+    "mode_transition_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from_mode", "to_mode", "reason"],
+        "properties": {
+          "from_mode": { "enum": ["MANUAL", "AUTONOMOUS", "HYBRID", null] },
+          "to_mode": { "enum": ["MANUAL", "AUTONOMOUS", "HYBRID"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "bootstrap_invocation_logical_sha256": { "$ref": "#/$defs/sha256" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "dependency_resolution_identity": { "type": ["string", "null"] },
+    "independent_review_claimed": { "const": false },
+    "evidence_references": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" }
+  }
+}

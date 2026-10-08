@@ -1,0 +1,254 @@
+{
+  "acquired_for_current_gate": [],
+  "artifact_kind": "ACQUISITION_MANIFEST",
+  "content_sha256": "0D096C776FBF7AA6E15CC1E4F2DD23E0B91BCC17399312676FF4F8D31BF9C1AB",
+  "declared_architecture_baseline": [
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "foxbin2prg",
+      "allowed_acquisition_modes": [
+        "BOUND_TOOL_ROOT",
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P06_FOXBIN_ANALYSIS",
+      "declared_version": "1.21.05",
+      "destination_role": "external_tool_root (never inside REPO_ROOT unless byte-exact vendored snapshot is explicitly required)",
+      "immutable_identity": {
+        "kind": "git_commit",
+        "value": "32715d06b84753401b7262c3cc48bde758ee3c8d"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://github.com/fdbozzo/foxbin2prg",
+      "role": "CANONICAL_VFP_BINARY_TEXT_ENGINE"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "vfpx_helpfile",
+      "allowed_acquisition_modes": [
+        "BOUND_TOOL_ROOT",
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P03_KNOWLEDGE",
+      "declared_version": "1.08",
+      "destination_role": "operator-provided local corpus root (never vendored by default)",
+      "immutable_identity": {
+        "kind": "git_commit",
+        "value": "b911ff18b06f421ece242c1d4dfa9fb140864a4a"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "OPERATOR_PROVIDED_LOCAL_CORPUS; redistribution rights MUST be proven for that exact asset before any redistribution (REQ-P00-025)"
+      },
+      "origin": "https://github.com/VFPX/HelpFile",
+      "role": "NORMATIVE_VFP_DOCUMENTATION_CORPUS"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "dbfbridge",
+      "allowed_acquisition_modes": [
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P04_DATA",
+      "declared_version": "1.1.1",
+      "destination_role": "locked Python dependency (public 1.x API boundary only; internals never copied)",
+      "immutable_identity": {
+        "kind": "version",
+        "value": "1.1.1"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://github.com/PeterPirog/dbfbridge",
+      "role": "DBF_FPT_ENGINE_PUBLIC_API"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "dbf_anonymizer",
+      "allowed_acquisition_modes": [
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P12_PRIVACY",
+      "declared_version": "1.0.0.dev0",
+      "destination_role": "locked Python dependency (public clean-slate 1.x boundary only; internals never copied)",
+      "immutable_identity": {
+        "kind": "version_at_commit",
+        "value": "1.0.0.dev0 @ 02763d7c34b19335e560ef9597a54aed7790968d"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://github.com/PeterPirog/DBF_Anonymizer",
+      "role": "PRIVACY_ENGINE_PUBLIC_API"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "converge-orchestrator",
+      "allowed_acquisition_modes": [
+        "BOUND_TOOL_ROOT",
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "B0_CONTROLLER_ACQUISITION",
+      "declared_version": null,
+      "destination_role": "dedicated canonicalized tool_root (REQ-G00-059..061); required only for the AUTONOMOUS controller path",
+      "immutable_identity": {
+        "commit": "1be97b75cf3b51f5ad0c2f212288f0a9edb3899b",
+        "kind": "git_commit_and_tree",
+        "tree": "d47b3c74b7b597dec503b4d3dca9db60e5488c93"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://github.com/PeterPirog/converge-orchestrator",
+      "role": "DEFAULT_AUTONOMOUS_CONTROLLER"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "mcp_python_sdk",
+      "allowed_acquisition_modes": [
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P01_MCP_MIN",
+      "declared_version": "2.2.0",
+      "destination_role": "locked Python dependency; installed only when the MCP milestone work begins",
+      "immutable_identity": {
+        "kind": "version",
+        "value": "2.2.0"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://pypi.org/project/mcp/",
+      "role": "MCP_SERVER_SDK"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "mcp_conformance",
+      "allowed_acquisition_modes": [
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P17_MCP_STABILIZATION",
+      "declared_version": "0.2.0-alpha.10",
+      "destination_role": "trusted-host conformance referee; used by later MCP stabilization gates",
+      "immutable_identity": {
+        "kind": "package_version",
+        "value": "0.2.0-alpha.10 / requirements 2026-07-28"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://www.npmjs.com/package/@modelcontextprotocol/conformance",
+      "role": "MCP_CONFORMANCE_REFEREE"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "psycopg",
+      "allowed_acquisition_modes": [
+        "CONNECTED_PINNED",
+        "OFFLINE_CACHE"
+      ],
+      "availability_milestone": "P13_RELATIONAL_MODEL",
+      "declared_version": "3.3.6",
+      "destination_role": "locked Python dependency; installed only when PostgreSQL work begins",
+      "immutable_identity": {
+        "kind": "version",
+        "value": "3.3.6"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "VERIFY_UPSTREAM_LICENSE_AT_ACQUISITION"
+      },
+      "origin": "https://pypi.org/project/psycopg/",
+      "role": "POSTGRESQL_PYTHON_DRIVER"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "postgresql_server",
+      "allowed_acquisition_modes": [
+        "OPERATOR_PROVIDED_TRUSTED_HOST"
+      ],
+      "availability_milestone": "P15_SHADOW_MIGRATION",
+      "declared_version": "18.6",
+      "destination_role": "trusted host service; never vendored",
+      "immutable_identity": {
+        "kind": "version",
+        "value": "18.6"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "TRUSTED_HOST_INSTALLATION; no redistribution by this repository"
+      },
+      "origin": "https://www.postgresql.org/download/windows/",
+      "role": "POSTGRESQL_SERVER_TRUSTED_HOST"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "psqlodbc",
+      "allowed_acquisition_modes": [
+        "OPERATOR_PROVIDED_TRUSTED_HOST"
+      ],
+      "availability_milestone": "P16_TRANSITION",
+      "declared_version": "REL-18_00_0002",
+      "destination_role": "trusted host driver; never vendored",
+      "immutable_identity": {
+        "kind": "version",
+        "value": "REL-18_00_0002 (32-bit)"
+      },
+      "license_expectation": {
+        "declared": null,
+        "policy": "TRUSTED_HOST_INSTALLATION; 32-bit VFP transition profile"
+      },
+      "origin": "OPERATOR_PROVIDED_TRUSTED_HOST (origin URL not pinned by Rev.35)",
+      "role": "PSQL_ODBC_DRIVER_TRUSTED_HOST"
+    },
+    {
+      "acquired_for_current_gate": false,
+      "acquisition_id": "microsoft_vfp9sp2",
+      "allowed_acquisition_modes": [
+        "OPERATOR_PROVIDED_TRUSTED_HOST"
+      ],
+      "availability_milestone": "P10_OPTIMIZATION",
+      "declared_version": "9.0 SP2",
+      "destination_role": "operator-provided local runtime",
+      "immutable_identity": {
+        "kind": "operator_asset",
+        "value": "local VFP9 SP2 installation"
+      },
+      "license_expectation": {
+        "declared": "Microsoft license",
+        "policy": "MUST NOT be vendored into public source or release artifacts unless explicit redistribution rights and provenance are recorded (REQ-P00-025)"
+      },
+      "origin": "OPERATOR_PROVIDED (licensed Microsoft product)",
+      "role": "VFP_RUNTIME_TRUSTED_HOST"
+    }
+  ],
+  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generator": {
+    "identity": "vfp-toolchain-control-plane-generator",
+    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "version": "1.0.0"
+  },
+  "policy": {
+    "connected_preparation": "approved immutable origin -> verify -> local cache",
+    "offline_preparation": "preseeded local cache -> verify",
+    "post_acquisition_fingerprint": "content fingerprint recorded at acquisition time",
+    "runtime_requests": "no dependency acquisition (REQ-P00-009)"
+  },
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61"
+}

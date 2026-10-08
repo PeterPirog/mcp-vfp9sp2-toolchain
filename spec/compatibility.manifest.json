@@ -1,0 +1,297 @@
+{
+  "artifact_kind": "COMPATIBILITY_MANIFEST",
+  "capability_availability": [
+    {
+      "activation_milestone": "P01_CORE",
+      "available": false,
+      "capability": "core.service",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P01_CORE",
+      "available": false,
+      "capability": "core.jobs",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P02_SECURITY",
+      "available": false,
+      "capability": "platform.windows_policy",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P02_SECURITY",
+      "available": false,
+      "capability": "platform.execution_isolation",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P01_MCP_MIN",
+      "available": false,
+      "capability": "mcp.shell",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P03_KNOWLEDGE",
+      "available": false,
+      "capability": "knowledge.vfp9sp2_help",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P04_DATA",
+      "available": false,
+      "capability": "data.dbf_schema",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P04_DATA",
+      "available": false,
+      "capability": "data.dbf_rows_memo",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P04_DATA",
+      "available": false,
+      "capability": "data.datasets_lineage",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P04_DATA",
+      "available": false,
+      "capability": "data.value_search",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P05_SEMANTIC_GRAPH",
+      "available": false,
+      "capability": "semantic.graph",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P06_FOXBIN_ANALYSIS",
+      "available": false,
+      "capability": "vfp.foxbin_bridge",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P07_FORMS_CLASSES",
+      "available": false,
+      "capability": "forms.analysis",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P07_FORMS_CLASSES",
+      "available": false,
+      "capability": "classes.analysis",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P08_DBC_MODEL",
+      "available": false,
+      "capability": "dbc.model",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P09_REASONING",
+      "available": false,
+      "capability": "reasoning.questions",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P10_OPTIMIZATION",
+      "available": false,
+      "capability": "performance.indexes",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P10_OPTIMIZATION",
+      "available": false,
+      "capability": "vfp.runtime_execution",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P10_OPTIMIZATION",
+      "available": false,
+      "capability": "vfp.sys3054",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P11_REFACTOR",
+      "available": false,
+      "capability": "refactor.workspace",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P11_REFACTOR",
+      "available": false,
+      "capability": "vfp.compile_build",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P12_PRIVACY",
+      "available": false,
+      "capability": "privacy.anonymization",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P13_RELATIONAL_MODEL",
+      "available": false,
+      "capability": "relational.target_model",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P13_RELATIONAL_MODEL",
+      "available": false,
+      "capability": "postgres.schema_design",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P14_TRANSLATION",
+      "available": false,
+      "capability": "translation.vfp_sql",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P15_SHADOW_MIGRATION",
+      "available": false,
+      "capability": "postgres.shadow_migration",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P16_TRANSITION",
+      "available": false,
+      "capability": "postgres.transition",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P17_MCP_STABILIZATION",
+      "available": false,
+      "capability": "mcp.stabilized_surface",
+      "state": "NOT_IMPLEMENTED"
+    },
+    {
+      "activation_milestone": "P18_FINAL",
+      "available": false,
+      "capability": "release.final_acceptance",
+      "state": "NOT_IMPLEMENTED"
+    }
+  ],
+  "content_sha256": "CC1C675E9233E66011A0D50806A6AE9F9E6A94D8043B5272E242B4857EEDE934",
+  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generator": {
+    "identity": "vfp-toolchain-control-plane-generator",
+    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "version": "1.0.0"
+  },
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61",
+  "supported_operating_systems": [
+    "Windows"
+  ],
+  "supported_python_range": ">=3.10,<3.15",
+  "target_dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "tested_baselines": [
+    {
+      "compatibility_range": ">=1.1.1,<2",
+      "component": "dbfbridge",
+      "first_capability_milestone": "P04_DATA",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/PeterPirog/dbfbridge",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "1.1.1"
+    },
+    {
+      "compatibility_range": ">=1.0.0.dev0,<2",
+      "component": "dbf_anonymizer",
+      "first_capability_milestone": "P12_PRIVACY",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/PeterPirog/DBF_Anonymizer",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "1.0.0.dev0 @ 02763d7c34b19335e560ef9597a54aed7790968d"
+    },
+    {
+      "compatibility_range": null,
+      "component": "mcp_protocol",
+      "first_capability_milestone": "P01_MCP_MIN",
+      "installed_in_this_build": false,
+      "origin": "https://modelcontextprotocol.io/specification/2026-07-28",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "2026-07-28"
+    },
+    {
+      "compatibility_range": null,
+      "component": "mcp_python_sdk",
+      "first_capability_milestone": "P01_MCP_MIN",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/modelcontextprotocol/python-sdk",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "2.2.0"
+    },
+    {
+      "compatibility_range": null,
+      "component": "mcp_conformance",
+      "first_capability_milestone": "P17_MCP_STABILIZATION",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/modelcontextprotocol/conformance",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "@modelcontextprotocol/conformance@0.2.0-alpha.10 / requirements 2026-07-28"
+    },
+    {
+      "compatibility_range": null,
+      "component": "psycopg",
+      "first_capability_milestone": "P13_RELATIONAL_MODEL",
+      "installed_in_this_build": false,
+      "origin": "https://www.psycopg.org/",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "3.3.6"
+    },
+    {
+      "compatibility_range": "18.x (production-major)",
+      "component": "postgresql_server",
+      "first_capability_milestone": "P15_SHADOW_MIGRATION",
+      "installed_in_this_build": false,
+      "origin": "https://www.postgresql.org/",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "18.6"
+    },
+    {
+      "compatibility_range": null,
+      "component": "psqlodbc",
+      "first_capability_milestone": "P16_TRANSITION",
+      "installed_in_this_build": false,
+      "origin": "OPERATOR_PROVIDED_TRUSTED_HOST (origin URL not pinned by Rev.35)",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "REL-18_00_0002 (32-bit trusted VFP transition profile)"
+    },
+    {
+      "compatibility_range": null,
+      "component": "foxbin2prg",
+      "first_capability_milestone": "P06_FOXBIN_ANALYSIS",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/fdbozzo/foxbin2prg",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "1.21.05 @ 32715d06b84753401b7262c3cc48bde758ee3c8d"
+    },
+    {
+      "compatibility_range": null,
+      "component": "vfpx_helpfile",
+      "first_capability_milestone": "P03_KNOWLEDGE",
+      "installed_in_this_build": false,
+      "origin": "https://github.com/VFPX/HelpFile",
+      "status": "DECLARED_ARCHITECTURE_BASELINE",
+      "tested_baseline": "1.08 @ b911ff18b06f421ece242c1d4dfa9fb140864a4a"
+    }
+  ],
+  "windows_only": true,
+  "windows_support_matrix": {
+    "COMPATIBLE_UNVERIFIED": [],
+    "TESTED": [
+      "development hosts used for local qualification (recorded per qualification run)"
+    ],
+    "UNSUPPORTED": [
+      "non-Windows operating systems"
+    ],
+    "note": "REQ-P00-026: a successful test on one Windows build is never generalized."
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/release-gate.schema.json",
+  "title": "Readiness gate, release gate, scenario definitions, and gate index artifacts",
+  "oneOf": [
+    { "$ref": "#/$defs/readinessGate" },
+    { "$ref": "#/$defs/releaseGate" },
+    { "$ref": "#/$defs/scenarioDefinitions" },
+    { "$ref": "#/$defs/gateIndex" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "reqId": { "type": "string", "pattern": "^REQ-[A-Z0-9]+-\\d{3}$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version", "source_sha256"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "sot_revision", "sot_sha256", "generator", "content_sha256", "artifact_kind"],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "sot_revision": { "type": "integer" },
+        "sot_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_at_utc": { "type": "string" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "generator": { "$ref": "#/$defs/generator" }
+      }
+    },
+    "readinessGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "gate",
+        "start_mode",
+        "derivation",
+        "context",
+        "requirement_count",
+        "requirement_ids",
+        "requirement_id_digest",
+        "graph_content_sha256",
+        "gate_result",
+        "qualified"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "sot_revision": { "type": "integer" },
+        "sot_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_at_utc": { "type": "string" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "generator": { "$ref": "#/$defs/generator" },
+        "artifact_kind": { "const": "READINESS_GATE" },
+        "gate": { "enum": ["B0", "BR0"] },
+        "start_mode": { "enum": ["GREENFIELD", "BROWNFIELD"] },
+        "derivation": { "type": "string" },
+        "context": { "type": "object" },
+        "requirement_count": { "type": "integer", "minimum": 0 },
+        "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+        "requirement_id_digest": { "$ref": "#/$defs/sha256" },
+        "directly_selected_count": { "type": "integer", "minimum": 0 },
+        "transitive_prerequisites_added": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+        "excluded_by_applicability": { "type": "array", "items": { "type": "object" } },
+        "graph_content_sha256": { "$ref": "#/$defs/sha256" },
+        "gate_result": { "enum": ["PLANNED", "PASS", "FAIL", "BLOCKED"] },
+        "qualified": { "type": "boolean", "const": false }
+      }
+    },
+    "releaseGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "release",
+        "closure_milestones_declared",
+        "cumulative_milestones",
+        "cumulative_regression_releases",
+        "requirement_count",
+        "requirement_ids",
+        "requirement_id_digest",
+        "qualified",
+        "qualified_release_record",
+        "graph_content_sha256"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "sot_revision": { "type": "integer" },
+        "sot_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_at_utc": { "type": "string" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "generator": { "$ref": "#/$defs/generator" },
+        "artifact_kind": { "const": "RELEASE_GATE" },
+        "release": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "closure_milestones_declared": { "type": "array", "items": { "type": "string" } },
+        "cumulative_milestones": { "type": "array", "items": { "type": "string" } },
+        "cumulative_regression_releases": { "type": "array", "items": { "type": "string" } },
+        "requirement_count": { "type": "integer", "minimum": 0 },
+        "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+        "requirement_id_digest": { "$ref": "#/$defs/sha256" },
+        "governance_requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+        "qualified": { "type": "boolean", "const": false },
+        "qualified_release_record": { "type": "null" },
+        "graph_content_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "scenarioDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "parameter",
+        "target",
+        "execution_timing",
+        "variants",
+        "all_scenario_inputs_declared"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "sot_revision": { "type": "integer" },
+        "sot_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_at_utc": { "type": "string" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "generator": { "$ref": "#/$defs/generator" },
+        "artifact_kind": { "const": "GREENFIELD_SCENARIO_DEFINITIONS" },
+        "parameter": { "const": "authoring_mode" },
+        "target": { "type": "string" },
+        "execution_timing": { "type": "string" },
+        "variants": {
+          "type": "object",
+          "required": ["MANUAL", "AUTONOMOUS", "HYBRID"],
+          "additionalProperties": false,
+          "properties": {
+            "MANUAL": { "$ref": "#/$defs/scenarioVariant" },
+            "AUTONOMOUS": { "$ref": "#/$defs/scenarioVariant" },
+            "HYBRID": { "$ref": "#/$defs/scenarioVariant" }
+          }
+        },
+        "all_scenario_inputs_declared": { "const": true },
+        "scenario_hash_algorithm": { "type": "string" }
+      }
+    },
+    "gateIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_kind", "gates"],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "sot_revision": { "type": "integer" },
+        "sot_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_at_utc": { "type": "string" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "generator": { "$ref": "#/$defs/generator" },
+        "artifact_kind": { "const": "RELEASE_GATE_INDEX" },
+        "gates": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "scenarioVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["embedded_contract", "phases"],
+      "properties": {
+        "embedded_contract": { "type": "string" },
+        "human_source_editing_allowed": { "type": "boolean" },
+        "agent_source_editing_allowed": { "type": "boolean" },
+        "undeclared_human_source_edit": { "type": "string" },
+        "actor_attribution": { "type": "string" },
+        "phases_note": { "type": "string" },
+        "phases": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    }
+  }
+}

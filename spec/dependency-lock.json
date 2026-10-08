@@ -1,0 +1,431 @@
+{
+  "approved_origins": [
+    {
+      "authorization_ref": "OPERATOR-GREENFIELD-PYPI-B0-2026-10-08",
+      "origin": "https://pypi.org/simple"
+    },
+    {
+      "authorization_ref": "OPERATOR-GREENFIELD-PYPI-B0-2026-10-08",
+      "origin": "https://files.pythonhosted.org"
+    }
+  ],
+  "artifact_kind": "DEPENDENCY_LOCK",
+  "blocker": null,
+  "content_sha256": "7EAAB65BF96102223A723227EC5FAC5AB0BE86EF84E9FE83496D6DA57CD7CB47",
+  "direct_constraints": {
+    "build": [
+      {
+        "constraint": ">=1",
+        "distribution": "build",
+        "reason": "PEP 517/621 build frontend invoked by the deterministic B0 build step"
+      },
+      {
+        "constraint": ">=68",
+        "distribution": "setuptools",
+        "reason": "PEP 517 build backend (wheel/sdist)"
+      },
+      {
+        "constraint": ">=0.43",
+        "distribution": "wheel",
+        "reason": "wheel packaging helper for the wheel build"
+      }
+    ],
+    "runtime": [],
+    "schema_validation": [
+      {
+        "constraint": ">=4.21",
+        "distribution": "jsonschema",
+        "reason": "JSON Schema 2020-12 artifact validation"
+      },
+      {
+        "constraint": "==0.30.0",
+        "distribution": "rpds-py",
+        "reason": "matrix-coherent exact pin of the referencing persistence engine (wheel tags for the full supported matrix)"
+      }
+    ],
+    "test": [
+      {
+        "constraint": ">=8",
+        "distribution": "pytest",
+        "reason": "deterministic pytest runner for the candidate suite"
+      }
+    ]
+  },
+  "generator": {
+    "identity": "vfp-toolchain-dependency-lock-builder",
+    "source_sha256": "3B91852EC0493BC52C4D700035AC017766674BC8193D55A8467A263F41E202D4",
+    "version": "1.0.0"
+  },
+  "lock_role": "GREENFIELD_BOOTSTRAP",
+  "optional_profiles": {
+    "dev": [
+      "build",
+      "jsonschema",
+      "pytest",
+      "rpds-py",
+      "setuptools",
+      "wheel"
+    ]
+  },
+  "post_seal_policy": "after candidate-tree sealing: no floating re-resolution (REQ-G00-022)",
+  "python_range": ">=3.10,<3.15",
+  "resolution_status": "RESOLVED_FROZEN",
+  "resolved": {
+    "distributions": [
+      {
+        "artifact_filename": "attrs-26.1.0-py3-none-any.whl",
+        "distribution": "attrs",
+        "origin": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "C647AA4A12DFBAD9333CA4E71FE62DDC36F4E63B2D260A37A8B83D2F043AC309",
+        "version": "26.1.0"
+      },
+      {
+        "artifact_filename": "build-1.6.1-py3-none-any.whl",
+        "distribution": "build",
+        "origin": "https://files.pythonhosted.org/packages/ad/9b/9fb3585dabcd73a1b2a6267f63f62649347c9e6d072c9fde365b105abb2c/build-1.6.1-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev"
+        ],
+        "sha256": "ECD351A4BE9D35A9EAABA244A7687143C9C7D4AEA6AC964E7E7DDAB20CBCF4E7",
+        "version": "1.6.1"
+      },
+      {
+        "artifact_filename": "colorama-0.4.6-py2.py3-none-any.whl",
+        "distribution": "colorama",
+        "origin": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev",
+          "test"
+        ],
+        "sha256": "4F1D9991F5ACC0CA119F9D443620B77F9D6B33703E51011C16BAF57AFB285FC6",
+        "version": "0.4.6"
+      },
+      {
+        "artifact_filename": "exceptiongroup-1.3.1-py3-none-any.whl",
+        "distribution": "exceptiongroup",
+        "origin": "https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "test"
+        ],
+        "sha256": "A7A39A3BD276781E98394987D3A5701D0C4EDFFB633BB7A5144577F82C773598",
+        "version": "1.3.1"
+      },
+      {
+        "artifact_filename": "iniconfig-2.3.1-py3-none-any.whl",
+        "distribution": "iniconfig",
+        "origin": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "test"
+        ],
+        "sha256": "9121E2C1FDB355232495BE3194C8DFE87CCC2D5DEE45947B78E68F499790D7A7",
+        "version": "2.3.1"
+      },
+      {
+        "artifact_filename": "jsonschema-4.26.0-py3-none-any.whl",
+        "distribution": "jsonschema",
+        "origin": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "D489F15263B8D200F8387E64B4C3A75F06629559FB73DEB8FDFB525F2DAB50CE",
+        "version": "4.26.0"
+      },
+      {
+        "artifact_filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+        "distribution": "jsonschema-specifications",
+        "origin": "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "98802FEE3A11EE76ECACA44429FDA8A41BFF98B00A0F2838151B113F210CC6FE",
+        "version": "2025.9.1"
+      },
+      {
+        "artifact_filename": "packaging-26.3-py3-none-any.whl",
+        "distribution": "packaging",
+        "origin": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev",
+          "test"
+        ],
+        "sha256": "D7193F7C8E4E93F444FDE0262BF90AF30E16FA0AD0AD44CB553C87339B23CD1C",
+        "version": "26.3"
+      },
+      {
+        "artifact_filename": "pluggy-1.6.0-py3-none-any.whl",
+        "distribution": "pluggy",
+        "origin": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "test"
+        ],
+        "sha256": "E920276DD6813095E9377C0BC5566D94C932C33B27A3E3945D8389C374DD4746",
+        "version": "1.6.0"
+      },
+      {
+        "artifact_filename": "pygments-2.21.0-py3-none-any.whl",
+        "distribution": "pygments",
+        "origin": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "test"
+        ],
+        "sha256": "2363C69B61C4A97C838DA3B130DCD6468F4848992B21A82F2A63EC34377137D9",
+        "version": "2.21.0"
+      },
+      {
+        "artifact_filename": "pyproject_hooks-1.3.3-py3-none-any.whl",
+        "distribution": "pyproject-hooks",
+        "origin": "https://files.pythonhosted.org/packages/85/11/044d1ae1b4ec0d7af88ee5bc91e081be1022533032b906a7bdabdbb60977/pyproject_hooks-1.3.3-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev"
+        ],
+        "sha256": "5FC53FDAC9F7BD63FBCDC868FB5F90B4784D78A53A3D3388CD738B807441A20B",
+        "version": "1.3.3"
+      },
+      {
+        "artifact_filename": "pytest-9.1.1-py3-none-any.whl",
+        "distribution": "pytest",
+        "origin": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "test"
+        ],
+        "sha256": "37A86B45EFB9A47A61A36449063E8E18D0CAB3161329FC099EB21783169C4F0C",
+        "version": "9.1.1"
+      },
+      {
+        "artifact_filename": "referencing-0.37.0-py3-none-any.whl",
+        "distribution": "referencing",
+        "origin": "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "381329A9F99628C9069361716891D34AD94AF76E461DCB0335825AECC7692231",
+        "version": "0.37.0"
+      },
+      {
+        "artifact_filename": "rpds_py-0.30.0-cp310-cp310-win_amd64.whl",
+        "distribution": "rpds-py",
+        "origin": "https://files.pythonhosted.org/packages/96/cb/156d7a5cf4f78a7cc571465d8aec7a3c447c94f6749c5123f08438bcf7bc/rpds_py-0.30.0-cp310-cp310-win_amd64.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "1726859CD0DE969F88DC8673BDD954185B9104E05806BE64BCD87BADBE313169",
+        "version": "0.30.0"
+      },
+      {
+        "artifact_filename": "rpds_py-0.30.0-cp312-cp312-win_amd64.whl",
+        "distribution": "rpds-py",
+        "origin": "https://files.pythonhosted.org/packages/39/3b/f786af9957306fdc38a74cef405b7b93180f481fb48453a114bb6465744a/rpds_py-0.30.0-cp312-cp312-win_amd64.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "A090322CA841ABD453D43456AC34DB46E8B05FD9B3B4AC0C78BCDE8B089F959B",
+        "version": "0.30.0"
+      },
+      {
+        "artifact_filename": "rpds_py-0.30.0-cp314-cp314-win_amd64.whl",
+        "distribution": "rpds-py",
+        "origin": "https://files.pythonhosted.org/packages/3e/d2/1aaac33287e8cfb07aab2e6b8ac1deca62f6f65411344f1433c55e6f3eb8/rpds_py-0.30.0-cp314-cp314-win_amd64.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation"
+        ],
+        "sha256": "95F0802447AC2D10BCC69F6DC28FE95FDF17940367B21D34E34C737870758950",
+        "version": "0.30.0"
+      },
+      {
+        "artifact_filename": "setuptools-84.0.0-py3-none-any.whl",
+        "distribution": "setuptools",
+        "origin": "https://files.pythonhosted.org/packages/95/9c/c510029fc6ef33a6275cd2c5d3cecd6613dfd6aa401d57c54f1c18852ccf/setuptools-84.0.0-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev"
+        ],
+        "sha256": "51A52592B3B99E102B609654876BD65F19F999935166D1352678931132B0C670",
+        "version": "84.0.0"
+      },
+      {
+        "artifact_filename": "tomli-2.5.0-py3-none-any.whl",
+        "distribution": "tomli",
+        "origin": "https://files.pythonhosted.org/packages/60/3f/3e3f8fd0919249b0200c80fbc4f9a1e70be19f9883da71dfb7f8b9ab8aca/tomli-2.5.0-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev",
+          "test"
+        ],
+        "sha256": "32A7B79AC57A2E83670CE329CCF675798BC5A2094783A63676866B70503F2E2B",
+        "version": "2.5.0"
+      },
+      {
+        "artifact_filename": "typing_extensions-4.16.0-py3-none-any.whl",
+        "distribution": "typing-extensions",
+        "origin": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+        "profile_membership": [
+          "dev",
+          "schema_validation",
+          "test"
+        ],
+        "sha256": "481CAA481374E813C1B176ADA14E97F1F67A4539CE9CFEB3F350D78D6370C2E8",
+        "version": "4.16.0"
+      },
+      {
+        "artifact_filename": "wheel-0.48.0-py3-none-any.whl",
+        "distribution": "wheel",
+        "origin": "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl",
+        "profile_membership": [
+          "build",
+          "dev"
+        ],
+        "sha256": "3217DCC807155E45DB462D7EF2431F5DDDA0D7273B700D05A67B271CEB1287AB",
+        "version": "0.48.0"
+      }
+    ],
+    "resolved_at_invocation_hash": "53E33FEE39229DCB6545CDDF58DA3124F2FE95CABD3EC515FE09DA25B5BA47B9"
+  },
+  "resolver_identity": {
+    "tool": "pip",
+    "version": "py3.10:23.0.1;py3.12:25.0.1;py3.14:25.2"
+  },
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61",
+  "transitive_artifacts": [
+    {
+      "distribution": "attrs",
+      "filename": "attrs-26.1.0-py3-none-any.whl",
+      "sha256": "C647AA4A12DFBAD9333CA4E71FE62DDC36F4E63B2D260A37A8B83D2F043AC309",
+      "version": "26.1.0"
+    },
+    {
+      "distribution": "build",
+      "filename": "build-1.6.1-py3-none-any.whl",
+      "sha256": "ECD351A4BE9D35A9EAABA244A7687143C9C7D4AEA6AC964E7E7DDAB20CBCF4E7",
+      "version": "1.6.1"
+    },
+    {
+      "distribution": "colorama",
+      "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+      "sha256": "4F1D9991F5ACC0CA119F9D443620B77F9D6B33703E51011C16BAF57AFB285FC6",
+      "version": "0.4.6"
+    },
+    {
+      "distribution": "exceptiongroup",
+      "filename": "exceptiongroup-1.3.1-py3-none-any.whl",
+      "sha256": "A7A39A3BD276781E98394987D3A5701D0C4EDFFB633BB7A5144577F82C773598",
+      "version": "1.3.1"
+    },
+    {
+      "distribution": "iniconfig",
+      "filename": "iniconfig-2.3.1-py3-none-any.whl",
+      "sha256": "9121E2C1FDB355232495BE3194C8DFE87CCC2D5DEE45947B78E68F499790D7A7",
+      "version": "2.3.1"
+    },
+    {
+      "distribution": "jsonschema",
+      "filename": "jsonschema-4.26.0-py3-none-any.whl",
+      "sha256": "D489F15263B8D200F8387E64B4C3A75F06629559FB73DEB8FDFB525F2DAB50CE",
+      "version": "4.26.0"
+    },
+    {
+      "distribution": "jsonschema-specifications",
+      "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+      "sha256": "98802FEE3A11EE76ECACA44429FDA8A41BFF98B00A0F2838151B113F210CC6FE",
+      "version": "2025.9.1"
+    },
+    {
+      "distribution": "packaging",
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "sha256": "D7193F7C8E4E93F444FDE0262BF90AF30E16FA0AD0AD44CB553C87339B23CD1C",
+      "version": "26.3"
+    },
+    {
+      "distribution": "pluggy",
+      "filename": "pluggy-1.6.0-py3-none-any.whl",
+      "sha256": "E920276DD6813095E9377C0BC5566D94C932C33B27A3E3945D8389C374DD4746",
+      "version": "1.6.0"
+    },
+    {
+      "distribution": "pygments",
+      "filename": "pygments-2.21.0-py3-none-any.whl",
+      "sha256": "2363C69B61C4A97C838DA3B130DCD6468F4848992B21A82F2A63EC34377137D9",
+      "version": "2.21.0"
+    },
+    {
+      "distribution": "pyproject-hooks",
+      "filename": "pyproject_hooks-1.3.3-py3-none-any.whl",
+      "sha256": "5FC53FDAC9F7BD63FBCDC868FB5F90B4784D78A53A3D3388CD738B807441A20B",
+      "version": "1.3.3"
+    },
+    {
+      "distribution": "pytest",
+      "filename": "pytest-9.1.1-py3-none-any.whl",
+      "sha256": "37A86B45EFB9A47A61A36449063E8E18D0CAB3161329FC099EB21783169C4F0C",
+      "version": "9.1.1"
+    },
+    {
+      "distribution": "referencing",
+      "filename": "referencing-0.37.0-py3-none-any.whl",
+      "sha256": "381329A9F99628C9069361716891D34AD94AF76E461DCB0335825AECC7692231",
+      "version": "0.37.0"
+    },
+    {
+      "distribution": "rpds-py",
+      "filename": "rpds_py-0.30.0-cp310-cp310-win_amd64.whl",
+      "sha256": "1726859CD0DE969F88DC8673BDD954185B9104E05806BE64BCD87BADBE313169",
+      "version": "0.30.0"
+    },
+    {
+      "distribution": "rpds-py",
+      "filename": "rpds_py-0.30.0-cp312-cp312-win_amd64.whl",
+      "sha256": "A090322CA841ABD453D43456AC34DB46E8B05FD9B3B4AC0C78BCDE8B089F959B",
+      "version": "0.30.0"
+    },
+    {
+      "distribution": "rpds-py",
+      "filename": "rpds_py-0.30.0-cp314-cp314-win_amd64.whl",
+      "sha256": "95F0802447AC2D10BCC69F6DC28FE95FDF17940367B21D34E34C737870758950",
+      "version": "0.30.0"
+    },
+    {
+      "distribution": "setuptools",
+      "filename": "setuptools-84.0.0-py3-none-any.whl",
+      "sha256": "51A52592B3B99E102B609654876BD65F19F999935166D1352678931132B0C670",
+      "version": "84.0.0"
+    },
+    {
+      "distribution": "tomli",
+      "filename": "tomli-2.5.0-py3-none-any.whl",
+      "sha256": "32A7B79AC57A2E83670CE329CCF675798BC5A2094783A63676866B70503F2E2B",
+      "version": "2.5.0"
+    },
+    {
+      "distribution": "typing-extensions",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481CAA481374E813C1B176ADA14E97F1F67A4539CE9CFEB3F350D78D6370C2E8",
+      "version": "4.16.0"
+    },
+    {
+      "distribution": "wheel",
+      "filename": "wheel-0.48.0-py3-none-any.whl",
+      "sha256": "3217DCC807155E45DB462D7EF2431F5DDDA0D7273B700D05A67B271CEB1287AB",
+      "version": "0.48.0"
+    }
+  ]
+}

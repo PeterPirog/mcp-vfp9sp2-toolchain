@@ -1,0 +1,86 @@
+# Default Converge execution profile (Rev.35 pinned controller baseline).
+#
+# Product semantics are controller-neutral: this profile binds the portable
+# contract to the pinned Converge controller for AUTONOMOUS (and optionally
+# HYBRID) execution without changing requirement IDs, verifier semantics,
+# evidence classes, or release-gate closure (REQ-PORT-008 / REQ-PORT-034).
+profile_id: converge
+profile_schema_version: 1
+controller_class: AUTONOMOUS_OR_HYBRID
+supported_authoring_modes: [AUTONOMOUS, HYBRID]
+supported_operation_scopes: [LOCAL_QUALIFICATION, REMOTE_INTEGRATION, PUBLICATION]
+converge_required: true
+
+controller:
+  # Immutable pinned baseline from REQ-G00-059 (never a moving branch/tag).
+  origin: https://github.com/PeterPirog/converge-orchestrator
+  commit: 1be97b75cf3b51f5ad0c2f212288f0a9edb3899b
+  tree: d47b3c74b7b597dec503b4d3dca9db60e5488c93
+  acquisition: [BOUND_TOOL_ROOT, CONNECTED_PINNED, OFFLINE_CACHE]
+
+model_role_contract:
+  contract: AUTONOMOUS_MODEL_ROLE_CONTRACT_V1
+  roles: [SCOUT, PLANNER, BUILDER, CORRECTNESS_REVIEWER, ARCHITECTURE_REVIEWER, SECURITY_REVIEWER]
+
+runtime_config_projection:
+  # External controller runtime configuration (REQ-G00-072) — generated
+  # outside REPO_ROOT; secret values stay environment-only.
+  target: EXTERNAL_CONTROLLER_RUNTIME_CONFIG
+  require_spec_read_only: true
+  github_repo_local_qualification: DISABLED
+  state_worktree_location: outside_repo_root
+
+role_bindings:
+  project_home:
+    source: OPERATOR
+    required: true
+    creation: EXPLICIT
+  repo_root:
+    source: DERIVED
+    rule: "project_home\\mcp-vfp9sp2-toolchain"
+    creation: EXPLICIT
+  temp_root:
+    source: DERIVED_DEFAULT
+    default: "project_home\\TEMP"
+    creation: LAZY
+  venv_root:
+    source: DERIVED_DEFAULT
+    default: "project_home\\.venv"
+    creation: LAZY
+  cache_roots:
+    - source: DERIVED_DEFAULT
+      default: "project_home\\cache"
+      creation: LAZY
+  tool_roots:
+    - source: OPTIONAL_DEFAULT
+      default: "project_home\\tools"
+      creation: LAZY
+  bootstrap_sot_path:
+    source: OPERATOR
+    required: true
+    creation: NEVER_AUTO
+
+canonical_product_repository_identity: https://github.com/PeterPirog/mcp-vfp9sp2-toolchain
+target_ref:
+  greenfield_default: refs/heads/main
+  brownfield_default: refs/heads/main
+  brownfield_explicit_override: true
+operation_scope_default: LOCAL_QUALIFICATION
+
+bootstrap_procedures:
+  MANUAL: MANUAL_BOOTSTRAP_V1
+  AUTONOMOUS: AUTONOMOUS_BOOTSTRAP_V1
+
+verifier_dispatch:
+  manifest: spec/verification.manifest.json
+  command: [python, tools/verify.py, dispatch]
+
+adapter_identity:
+  identity: converge
+  version: "1.0.0"
+
+notes: >-
+  Converge profile projects the portable verification manifest into the
+  external controller runtime configuration without weakening requirement
+  closure, verifier semantics, evidence schemas, or release gates
+  (REQ-G00-072 / REQ-PORT-034).

@@ -1,0 +1,87 @@
+{
+  "profile_id": "generic",
+  "profile_schema_version": 1,
+  "controller_class": "HUMAN_OPERATED_OR_HYBRID",
+  "supported_authoring_modes": ["MANUAL", "HYBRID"],
+  "supported_operation_scopes": ["LOCAL_QUALIFICATION"],
+  "converge_required": false,
+  "role_bindings": {
+    "project_home": {
+      "source": "OPERATOR",
+      "required": true,
+      "creation": "EXPLICIT",
+      "note": "Operator-selected absolute Windows PROJECT_HOME; no drive letter or current-directory derivation (REQ-G00-026)."
+    },
+    "repo_root": {
+      "source": "DERIVED",
+      "rule": "project_home\\mcp-vfp9sp2-toolchain",
+      "creation": "EXPLICIT",
+      "note": "Enforced direct canonical child after Windows canonicalization (REQ-PORT-027)."
+    },
+    "temp_root": {
+      "source": "DERIVED_DEFAULT",
+      "default": "project_home\\TEMP",
+      "creation": "LAZY",
+      "note": "Deterministic default; may be overridden by the bootstrap invocation (REQ-G00-037)."
+    },
+    "venv_root": {
+      "source": "DERIVED_DEFAULT",
+      "default": "project_home\\.venv",
+      "creation": "LAZY",
+      "note": "Deterministic default; may be overridden by the bootstrap invocation (REQ-G00-037)."
+    },
+    "cache_roots": [
+      {
+        "source": "DERIVED_DEFAULT",
+        "default": "project_home\\cache",
+        "creation": "LAZY",
+        "note": "Deterministic default cache root; may be overridden (REQ-G00-037)."
+      }
+    ],
+    "tool_roots": [
+      {
+        "source": "OPTIONAL_DEFAULT",
+        "default": "project_home\\tools",
+        "creation": "LAZY",
+        "note": "Provisioned only through controller/tool acquisition rules (REQ-G00-059..REQ-G00-062)."
+      }
+    ],
+    "bootstrap_sot_path": {
+      "source": "OPERATOR",
+      "required": true,
+      "creation": "NEVER_AUTO",
+      "note": "Explicit readable file binding; never discovered by scanning (REQ-G00-033)."
+    }
+  },
+  "canonical_product_repository_identity": "https://github.com/PeterPirog/mcp-vfp9sp2-toolchain",
+  "target_ref": {
+    "greenfield_default": "refs/heads/main",
+    "brownfield_default": "refs/heads/main",
+    "brownfield_explicit_override": true
+  },
+  "operation_scope_default": "LOCAL_QUALIFICATION",
+  "authoring_defaults": {
+    "MANUAL": {
+      "default_execution_profile_after_bootstrap": "generic",
+      "coding_agent_required": false
+    },
+    "HYBRID": {
+      "default_execution_profile_after_bootstrap": "generic",
+      "coding_agent_required": "optional",
+      "actor_attribution": "required"
+    }
+  },
+  "bootstrap_procedures": {
+    "MANUAL": "MANUAL_BOOTSTRAP_V1",
+    "AUTONOMOUS": "AUTONOMOUS_BOOTSTRAP_V1"
+  },
+  "verifier_dispatch": {
+    "manifest": "spec/verification.manifest.json",
+    "command": ["python", "tools/verify.py", "dispatch"]
+  },
+  "adapter_identity": {
+    "identity": "generic",
+    "version": "1.0.0"
+  },
+  "notes": "Portable generic profile: MANUAL/HYBRID execution without Converge, a coding agent, or any model provider. Product semantics are controller-neutral (REQ-G00-056/REQ-PORT-034)."
+}

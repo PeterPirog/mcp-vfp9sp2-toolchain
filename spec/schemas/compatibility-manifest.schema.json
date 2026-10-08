@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/compatibility-manifest.schema.json",
+  "title": "Machine-readable compatibility manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sot_revision",
+    "sot_sha256",
+    "generator",
+    "content_sha256",
+    "artifact_kind",
+    "supported_python_range",
+    "supported_operating_systems",
+    "target_dialect",
+    "windows_only",
+    "tested_baselines",
+    "windows_support_matrix",
+    "capability_availability"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "sot_revision": { "type": "integer" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "generated_at_utc": { "type": "string" },
+    "content_sha256": { "$ref": "#/$defs/sha256" },
+    "generator": { "$ref": "#/$defs/generator" },
+    "artifact_kind": { "const": "COMPATIBILITY_MANIFEST" },
+    "supported_python_range": { "const": ">=3.10,<3.15" },
+    "supported_operating_systems": { "type": "array", "minItems": 1, "items": { "const": "Windows" } },
+    "target_dialect": { "const": "microsoft.visual-foxpro.9.0.sp2" },
+    "windows_only": { "const": true },
+    "tested_baselines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "component",
+          "tested_baseline",
+          "origin",
+          "status",
+          "installed_in_this_build",
+          "first_capability_milestone"
+        ],
+        "properties": {
+          "component": { "type": "string" },
+          "tested_baseline": { "type": "string" },
+          "compatibility_range": { "type": ["string", "null"] },
+          "origin": { "type": "string" },
+          "status": { "type": "string" },
+          "installed_in_this_build": { "type": "boolean" },
+          "first_capability_milestone": { "type": "string" }
+        }
+      }
+    },
+    "windows_support_matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["TESTED", "COMPATIBLE_UNVERIFIED", "UNSUPPORTED", "note"],
+      "properties": {
+        "TESTED": { "type": "array", "items": { "type": "string" } },
+        "COMPATIBLE_UNVERIFIED": { "type": "array", "items": { "type": "string" } },
+        "UNSUPPORTED": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" }
+      }
+    },
+    "capability_availability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability", "activation_milestone", "available", "state"],
+        "properties": {
+          "capability": { "type": "string" },
+          "activation_milestone": { "type": "string" },
+          "available": { "type": "boolean", "const": false },
+          "state": { "const": "NOT_IMPLEMENTED" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version", "source_sha256"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

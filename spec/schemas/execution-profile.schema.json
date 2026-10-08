@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/execution-profile.schema.json",
+  "title": "Portable execution-profile binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "profile_schema_version",
+    "controller_class",
+    "supported_authoring_modes",
+    "supported_operation_scopes",
+    "converge_required",
+    "role_bindings",
+    "canonical_product_repository_identity",
+    "target_ref",
+    "operation_scope_default",
+    "bootstrap_procedures",
+    "verifier_dispatch"
+  ],
+  "properties": {
+    "profile_id": { "enum": ["generic", "converge"] },
+    "profile_schema_version": { "type": "integer", "const": 1 },
+    "controller_class": {
+      "enum": ["HUMAN_OPERATED_OR_HYBRID", "AUTONOMOUS_OR_HYBRID"]
+    },
+    "supported_authoring_modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["MANUAL", "AUTONOMOUS", "HYBRID"] }
+    },
+    "supported_operation_scopes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["LOCAL_QUALIFICATION", "REMOTE_INTEGRATION", "PUBLICATION"] }
+    },
+    "converge_required": { "type": "boolean" },
+    "role_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_home", "repo_root", "temp_root", "venv_root", "cache_roots", "tool_roots", "bootstrap_sot_path"],
+      "properties": {
+        "project_home": { "$ref": "#/$defs/roleBinding" },
+        "repo_root": { "$ref": "#/$defs/roleBinding" },
+        "temp_root": { "$ref": "#/$defs/roleBinding" },
+        "venv_root": { "$ref": "#/$defs/roleBinding" },
+        "cache_roots": { "type": "array", "items": { "$ref": "#/$defs/roleBinding" } },
+        "tool_roots": { "type": "array", "items": { "$ref": "#/$defs/roleBinding" } },
+        "bootstrap_sot_path": { "$ref": "#/$defs/roleBinding" }
+      }
+    },
+    "canonical_product_repository_identity": {
+      "const": "https://github.com/PeterPirog/mcp-vfp9sp2-toolchain"
+    },
+    "target_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["greenfield_default", "brownfield_default", "brownfield_explicit_override"],
+      "properties": {
+        "greenfield_default": { "const": "refs/heads/main" },
+        "brownfield_default": { "const": "refs/heads/main" },
+        "brownfield_explicit_override": { "type": "boolean" }
+      }
+    },
+    "operation_scope_default": { "const": "LOCAL_QUALIFICATION" },
+    "authoring_defaults": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "bootstrap_procedures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["MANUAL", "AUTONOMOUS"],
+      "properties": {
+        "MANUAL": { "const": "MANUAL_BOOTSTRAP_V1" },
+        "AUTONOMOUS": { "const": "AUTONOMOUS_BOOTSTRAP_V1" }
+      }
+    },
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "commit", "tree", "acquisition"],
+      "properties": {
+        "origin": { "const": "https://github.com/PeterPirog/converge-orchestrator" },
+        "commit": { "const": "1be97b75cf3b51f5ad0c2f212288f0a9edb3899b" },
+        "tree": { "const": "d47b3c74b7b597dec503b4d3dca9db60e5488c93" },
+        "acquisition": { "type": "array", "items": { "enum": ["BOUND_TOOL_ROOT", "CONNECTED_PINNED", "OFFLINE_CACHE"] } }
+      }
+    },
+    "model_role_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "roles"],
+      "properties": {
+        "contract": { "const": "AUTONOMOUS_MODEL_ROLE_CONTRACT_V1" },
+        "roles": {
+          "type": "array",
+          "minItems": 6,
+          "items": { "enum": ["SCOUT", "PLANNER", "BUILDER", "CORRECTNESS_REVIEWER", "ARCHITECTURE_REVIEWER", "SECURITY_REVIEWER"] }
+        }
+      }
+    },
+    "runtime_config_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "require_spec_read_only", "github_repo_local_qualification"],
+      "properties": {
+        "target": { "const": "EXTERNAL_CONTROLLER_RUNTIME_CONFIG" },
+        "require_spec_read_only": { "const": true },
+        "github_repo_local_qualification": { "const": "DISABLED" },
+        "state_worktree_location": { "type": "string" }
+      }
+    },
+    "verifier_dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "command"],
+      "properties": {
+        "manifest": { "const": "spec/verification.manifest.json" },
+        "command": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "adapter_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "roleBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "creation"],
+      "properties": {
+        "source": { "enum": ["OPERATOR", "DERIVED", "DERIVED_DEFAULT", "OPTIONAL_DEFAULT"] },
+        "required": { "type": "boolean" },
+        "rule": { "type": "string" },
+        "default": { "type": "string" },
+        "creation": { "enum": ["LAZY", "EXPLICIT", "NEVER_AUTO"] },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}
