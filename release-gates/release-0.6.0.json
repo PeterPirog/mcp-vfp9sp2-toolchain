@@ -5,7 +5,7 @@
     "P10_OPTIMIZATION",
     "activated_governance"
   ],
-  "content_sha256": "5F1B33AF4844AA387738ABDE4D1BE19DA414BA46CF70CD99AD304CCF39976D12",
+  "content_sha256": "7B6F66E256F816617A249109C23562203E3FC333E8268AEFB2C86B1BA4AE5327",
   "cumulative_milestones": [
     "P00_DOMAIN",
     "P01_CORE",
@@ -24,10 +24,10 @@
     "0.4.0",
     "0.5.0"
   ],
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
   "governance_requirement_ids": [
@@ -84,7 +84,7 @@
     "REQ-R03-001",
     "REQ-R03-002"
   ],
-  "graph_content_sha256": "73C5624AC8B283DCE21CAFC77664DEA2832D2B1B105F45EBDACB016AA123DB70",
+  "graph_content_sha256": "F51E9C54B2A5406DD96B866726359C2C09E1604B8F14818E4D77103FB16A8E2C",
   "qualified": false,
   "qualified_release_record": null,
   "release": "0.6.0",

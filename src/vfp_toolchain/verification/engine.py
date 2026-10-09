@@ -678,6 +678,35 @@ def test_map_report(repo_root: Path) -> dict[str, Any]:
     }
 
 
+# ----------------------------------------------------------------------
+# P00_DOMAIN product-contract gates (REQ-P00-001/002/011/018)
+# ----------------------------------------------------------------------
+
+
+def dialect_identity_report(repo_root: Path) -> dict[str, Any]:
+    from .product_contracts import dialect_identity_report as _report
+
+    return _report(repo_root)
+
+
+def platform_policy_report(repo_root: Path) -> dict[str, Any]:
+    from .product_contracts import platform_policy_report as _report
+
+    return _report(repo_root)
+
+
+def python_support_report(repo_root: Path) -> dict[str, Any]:
+    from .product_contracts import python_support_report as _report
+
+    return _report(repo_root)
+
+
+def support_claims_report(repo_root: Path) -> dict[str, Any]:
+    from .product_contracts import support_claims_report as _report
+
+    return _report(repo_root)
+
+
 def invocation_report(evidence_path: Path) -> dict[str, Any]:
     from ..bootstrap.invocation import build_invocation, invocation_hashes, secret_scan
 
@@ -1517,21 +1546,84 @@ def dispatch_requirement(
     }
 
 
-def _execute_verifier_command(verifier: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+def _execute_verifier_command(verifier: dict[str, Any], repo_root: Path, timeout: int = 600) -> dict[str, Any]:
     command = list(verifier["command"])
     if command and command[0] == "python":
         command[0] = sys.executable or "python"
-    completed = subprocess.run(
-        command,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=600,
-    )
-    status = "PASS" if completed.returncode == 0 else "FAIL"
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "verifier_id": verifier["verifier_id"],
+            "status": "FAIL",
+            "error_code": "VERIFIER_TIMEOUT",
+            "message": "Verifier command exceeded the configured timeout — fail closed (REQ-AUTO-004).",
+            "timeout_seconds": timeout,
+        }
+    except (OSError, ValueError) as error:
+        return {
+            "verifier_id": verifier["verifier_id"],
+            "status": "FAIL",
+            "error_code": "VERIFIER_CRASH",
+            "message": "Verifier command could not be executed — fail closed (REQ-AUTO-004).",
+            "detail": str(error),
+        }
+    # Zero-collected-test fail-closed semantics (REQ-AUTO-004): a unittest
+    # runner that collected zero tests must never yield PASS regardless of
+    # its exit code (pre-3.12 unittest exits 0 in that situation).  The
+    # unittest summary is printed on stderr, so both streams are scanned.
+    combined_output = completed.stdout + "\n" + completed.stderr
+    unittest_summary = re.search(r"Ran (\d+) tests?(?: in [\d.]+s)?", combined_output)
+    if "NO TESTS RAN" in combined_output or (unittest_summary is not None and int(unittest_summary.group(1)) == 0):
+        return {
+            "verifier_id": verifier["verifier_id"],
+            "status": "FAIL",
+            "error_code": "ZERO_COLLECTED_TESTS",
+            "message": "Verifier collected zero tests — fail closed (REQ-AUTO-004).",
+        }
+    if completed.returncode != 0:
+        return {
+            "verifier_id": verifier["verifier_id"],
+            "status": "FAIL",
+            "error_code": "VERIFIER_NONZERO_EXIT",
+            "exit_code": completed.returncode,
+            "stdout_tail": completed.stdout[-2000:],
+            "stderr_tail": completed.stderr[-2000:],
+        }
+    if unittest_summary is not None:
+        # Unexpected skip/xfail fail-closed semantics (REQ-AUTO-004).
+        stats_match = re.search(r"(?:OK|FAILED)(?:\s*\(([^)]*)\))?", combined_output)
+        stats = (stats_match.group(1) or "") if stats_match else ""
+        unexpected: dict[str, int] = {}
+        for stat in re.findall(r"(\w[\w ]*?)\s*=\s*(\d+)", stats):
+            label, count = stat[0].strip().lower(), int(stat[1])
+            if label in ("skipped", "expected failures", "unexpected successes") and count > 0:
+                unexpected[label] = count
+        if unexpected:
+            return {
+                "verifier_id": verifier["verifier_id"],
+                "status": "FAIL",
+                "error_code": "UNEXPECTED_SKIP_XFAIL",
+                "message": "Verifier reported skips/xfails — fail closed (REQ-AUTO-004).",
+                "stats": unexpected,
+            }
+        if not re.search(r"(?:^|\n)\s*OK\s*(\(|$)", combined_output):
+            return {
+                "verifier_id": verifier["verifier_id"],
+                "status": "FAIL",
+                "error_code": "MALFORMED_RESULT",
+                "message": "Verifier produced a zero-exit result without an OK summary — fail closed (REQ-AUTO-004).",
+                "stdout_tail": completed.stdout[-2000:],
+            }
     return {
         "verifier_id": verifier["verifier_id"],
-        "status": status,
+        "status": "PASS",
         "exit_code": completed.returncode,
         "stdout_tail": completed.stdout[-2000:],
         "stderr_tail": completed.stderr[-2000:],

@@ -63,14 +63,38 @@ python tools/verify.py layout
 python tools/verify.py determinism
 python tools/verify.py package
 python tools/verify.py no-download
+python tools/verify.py dialect-identity
+python tools/verify.py platform-policy
+python tools/verify.py python-support
+python tools/verify.py support-claims
 python -m unittest discover -s tests -t .
 ```
 
-## Platform
+## Platform and support
 
-Windows only. Python `>=3.10,<3.15`. Runtime dependencies: none at the
-bootstrap foundation (standard library only). See `docs/` for architecture,
-bootstrap, verification, and capability-state documentation.
+Windows-only product support. The production server supports Windows only;
+packaging, path handling, process execution, COM integration, filesystem
+safety, test matrices, CI acceptance, and release qualification are designed
+for Windows semantics (REQ-P00-002). Linux and macOS are not supported
+product platforms and never consume product test-matrix or release-gate
+scope (REQ-P00-018). The pure-logic bootstrap layer may incidentally import
+on a non-Windows interpreter, but such incidental behavior is unsupported
+product behavior.
+
+Supported dialect: Microsoft Visual FoxPro 9.0 Service Pack 2 exclusively
+(`microsoft.visual-foxpro.9.0.sp2`, REQ-P00-001). Syntax, object models,
+file semantics, compiler behavior, and runtime behavior from older FoxPro or
+Visual FoxPro releases are not automatically supported; an older-compatible
+language element becomes relevant only when it is documented by the pinned
+VFP9 SP2 corpus.
+
+Supported Python: `>=3.10,<3.15` (REQ-P00-011), validated by
+clean-environment acceptance on Python 3.10, 3.11, 3.12, 3.13 and 3.14.
+
+Runtime dependencies: none at the bootstrap foundation (standard library
+only). See `docs/support.md` for installation, support, and troubleshooting
+policy and `docs/` for architecture, bootstrap, verification, and
+capability-state documentation.
 
 ## License
 

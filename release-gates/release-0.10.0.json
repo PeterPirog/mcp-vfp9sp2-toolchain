@@ -5,7 +5,7 @@
     "P15_SHADOW_MIGRATION",
     "activated_governance"
   ],
-  "content_sha256": "5673E027266E0B1924F5ED3E977E40DDA8007281227DD952E014A142CA996509",
+  "content_sha256": "5E4C8FE7F6A195082663CD25ED3A4D47C1226D67FEBF27FAF987FAD248D03A0A",
   "cumulative_milestones": [
     "P00_DOMAIN",
     "P01_CORE",
@@ -33,10 +33,10 @@
     "0.8.0",
     "0.9.0"
   ],
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
   "governance_requirement_ids": [
@@ -93,7 +93,7 @@
     "REQ-R07-001",
     "REQ-R07-002"
   ],
-  "graph_content_sha256": "73C5624AC8B283DCE21CAFC77664DEA2832D2B1B105F45EBDACB016AA123DB70",
+  "graph_content_sha256": "F51E9C54B2A5406DD96B866726359C2C09E1604B8F14818E4D77103FB16A8E2C",
   "qualified": false,
   "qualified_release_record": null,
   "release": "0.10.0",

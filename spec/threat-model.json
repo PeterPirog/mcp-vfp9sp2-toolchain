@@ -513,16 +513,16 @@
       "trust_boundary": "Explicit operator authorization bound to invocation hash and destination identity; local qualification stays available."
     }
   ],
-  "content_sha256": "D9EBBCFE6D80D94EDA3CDC2BAD8FE6088E19032A5736F132CFF63C154AFDCFF3",
+  "content_sha256": "630E44EB19AE047F5BC7198A1480E313C7A04F2E806746A27D97CF410FE1E739",
   "control_status_vocabulary": [
     "DECLARED",
     "PLANNED",
     "PASS"
   ],
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
   "methodology": "STRIDE-style structured boundaries; statuses DECLARED/PLANNED only",

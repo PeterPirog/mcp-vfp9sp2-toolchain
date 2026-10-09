@@ -1,0 +1,12 @@
+{
+  "supported_python_range": ">=3.10,<3.15",
+  "supported_operating_systems": ["Windows"],
+  "target_dialect": "microsoft.visual-foxpro.9.0.sp2",
+  "windows_only": true,
+  "windows_support_matrix": {
+    "TESTED": [],
+    "COMPATIBLE_UNVERIFIED": [],
+    "UNSUPPORTED": ["non-Windows operating systems"],
+    "note": "fixture"
+  }
+}

@@ -1,6 +1,10 @@
 name: ci
 
-# Windows-only CI scaffolding (REQ-G00-004 / REQ-G00-005).
+# Windows-only CI scaffolding (REQ-G00-004 / REQ-G00-005 / REQ-P00-018).
+#
+# Product CI acceptance runs on Windows runners only, for every supported
+# Python minor (3.10-3.14, REQ-P00-011). Linux/macOS product jobs are
+# forbidden: non-Windows behavior is never product acceptance scope.
 #
 # Two jobs:
 #  * contract — stdlib-only deterministic contract checks; runs green with no
@@ -50,6 +54,27 @@ jobs:
       - name: No-runtime-download sentinel
         shell: pwsh
         run: python tools/verify.py no-download
+
+      # P00_DOMAIN product/platform identity gates (REQ-P00-001/002/011/018):
+      # Windows-only dialect identity, Windows-only platform policy, the
+      # canonical supported-Python range, and the Windows-only
+      # support-claims enforcement. The product CI matrix below stays
+      # Windows-only by design; Linux/macOS product jobs are forbidden.
+      - name: Dialect identity gate (VFP9 SP2 only)
+        shell: pwsh
+        run: python tools/verify.py dialect-identity
+
+      - name: Windows-only platform policy gate
+        shell: pwsh
+        run: python tools/verify.py platform-policy
+
+      - name: Supported-Python range gate (>=3.10,<3.15)
+        shell: pwsh
+        run: python tools/verify.py python-support
+
+      - name: Windows-only support-claims gate
+        shell: pwsh
+        run: python tools/verify.py support-claims
 
       - name: Test suite (stdlib runner; pytest-compatible)
         shell: pwsh

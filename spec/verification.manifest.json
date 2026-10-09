@@ -1,14 +1,14 @@
 {
   "artifact_kind": "VERIFICATION_MANIFEST",
-  "content_sha256": "A54D88E236E253202FFB078D0C85C22323AA50EFF1B3948344EB5014D7757027",
-  "executable_verifier_count": 9,
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "content_sha256": "234B7E0AFBFD69ACAA1881FB79F3BF302548EE0AF83619C3DB4E20F5D6E0E4BB",
+  "executable_verifier_count": 13,
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
-  "graph_content_sha256": "73C5624AC8B283DCE21CAFC77664DEA2832D2B1B105F45EBDACB016AA123DB70",
+  "graph_content_sha256": "F51E9C54B2A5406DD96B866726359C2C09E1604B8F14818E4D77103FB16A8E2C",
   "graph_ref": "spec/requirements.graph.json",
   "pass_count": 0,
   "requirement_count": 484,
@@ -2822,7 +2822,7 @@
       "lifecycle": "IMPLEMENTATION",
       "state_evidence": null,
       "verifier_ids": [
-        "VER-REQ-P00-001"
+        "VER-P00-DIALECT-IDENTITY"
       ]
     },
     "REQ-P00-002": {
@@ -2848,7 +2848,7 @@
       "lifecycle": "IMPLEMENTATION",
       "state_evidence": null,
       "verifier_ids": [
-        "VER-REQ-P00-002"
+        "VER-P00-WINDOWS-PLATFORM-POLICY"
       ]
     },
     "REQ-P00-003": {
@@ -3074,7 +3074,7 @@
       "lifecycle": "IMPLEMENTATION",
       "state_evidence": null,
       "verifier_ids": [
-        "VER-REQ-P00-011"
+        "VER-P00-PYTHON-SUPPORT-RANGE"
       ]
     },
     "REQ-P00-012": {
@@ -3256,7 +3256,7 @@
       "lifecycle": "IMPLEMENTATION",
       "state_evidence": null,
       "verifier_ids": [
-        "VER-REQ-P00-018"
+        "VER-P00-SUPPORT-CLAIMS"
       ]
     },
     "REQ-P00-019": {
@@ -10847,6 +10847,66 @@
       "state": "EXECUTABLE",
       "verifier_id": "VER-NO-RUNTIME-DOWNLOAD"
     },
+    "VER-P00-DIALECT-IDENTITY": {
+      "command": [
+        "python",
+        "tools/verify.py",
+        "dialect-identity"
+      ],
+      "covers": [
+        "REQ-P00-001"
+      ],
+      "evidence_class": "MACHINE_READABLE_REPORT",
+      "notes": "Canonical VFP9 SP2 dialect identity gate: exact identifier, identity reporting, negative rejection of older/generic dialect identities, cross-surface consistency.",
+      "required_capabilities": [],
+      "state": "EXECUTABLE",
+      "verifier_id": "VER-P00-DIALECT-IDENTITY"
+    },
+    "VER-P00-PYTHON-SUPPORT-RANGE": {
+      "command": [
+        "python",
+        "tools/verify.py",
+        "python-support"
+      ],
+      "covers": [
+        "REQ-P00-011"
+      ],
+      "evidence_class": "MACHINE_READABLE_REPORT",
+      "notes": "Supported-Python range (>=3.10,<3.15) consistency across pyproject, compatibility manifest, dependency lock, CI matrix, docs, and package runtime reporting. Clean-environment five-minor acceptance evidence is executed by tools/clean_env_smoke.py (typed host-prerequisite blockers when an interpreter is absent).",
+      "required_capabilities": [],
+      "state": "EXECUTABLE",
+      "verifier_id": "VER-P00-PYTHON-SUPPORT-RANGE"
+    },
+    "VER-P00-SUPPORT-CLAIMS": {
+      "command": [
+        "python",
+        "tools/verify.py",
+        "support-claims"
+      ],
+      "covers": [
+        "REQ-P00-018"
+      ],
+      "evidence_class": "MACHINE_READABLE_REPORT",
+      "notes": "Windows-only support-claims verifier over product surfaces (pyproject classifiers, README, docs, CI workflows, release-gate manifests, compatibility manifest) with explicit allow/exclude negation semantics and fail-closed missing-surface handling.",
+      "required_capabilities": [],
+      "state": "EXECUTABLE",
+      "verifier_id": "VER-P00-SUPPORT-CLAIMS"
+    },
+    "VER-P00-WINDOWS-PLATFORM-POLICY": {
+      "command": [
+        "python",
+        "tools/verify.py",
+        "platform-policy"
+      ],
+      "covers": [
+        "REQ-P00-002"
+      ],
+      "evidence_class": "MACHINE_READABLE_REPORT",
+      "notes": "Windows-only production platform policy gate: policy boundaries, package metadata, documentation statements, Windows-only CI structure.",
+      "required_capabilities": [],
+      "state": "EXECUTABLE",
+      "verifier_id": "VER-P00-WINDOWS-PLATFORM-POLICY"
+    },
     "VER-PACKAGE-FOUNDATION": {
       "command": [
         "python",
@@ -12030,28 +12090,6 @@
       "state": "PLANNED",
       "verifier_id": "VER-REQ-G00-074"
     },
-    "VER-REQ-P00-001": {
-      "command": null,
-      "covers": [
-        "REQ-P00-001"
-      ],
-      "evidence_class": "MACHINE_READABLE_REPORT",
-      "notes": "Mapped but not implemented; must become executable before this requirement can transition to PASS (REQ-G00-007, REQ-AUTO-002).",
-      "required_capabilities": [],
-      "state": "PLANNED",
-      "verifier_id": "VER-REQ-P00-001"
-    },
-    "VER-REQ-P00-002": {
-      "command": null,
-      "covers": [
-        "REQ-P00-002"
-      ],
-      "evidence_class": "MACHINE_READABLE_REPORT",
-      "notes": "Mapped but not implemented; must become executable before this requirement can transition to PASS (REQ-G00-007, REQ-AUTO-002).",
-      "required_capabilities": [],
-      "state": "PLANNED",
-      "verifier_id": "VER-REQ-P00-002"
-    },
     "VER-REQ-P00-003": {
       "command": null,
       "covers": [
@@ -12129,17 +12167,6 @@
       "state": "PLANNED",
       "verifier_id": "VER-REQ-P00-010"
     },
-    "VER-REQ-P00-011": {
-      "command": null,
-      "covers": [
-        "REQ-P00-011"
-      ],
-      "evidence_class": "MACHINE_READABLE_REPORT",
-      "notes": "Mapped but not implemented; must become executable before this requirement can transition to PASS (REQ-G00-007, REQ-AUTO-002).",
-      "required_capabilities": [],
-      "state": "PLANNED",
-      "verifier_id": "VER-REQ-P00-011"
-    },
     "VER-REQ-P00-012": {
       "command": null,
       "covers": [
@@ -12194,17 +12221,6 @@
       "required_capabilities": [],
       "state": "PLANNED",
       "verifier_id": "VER-REQ-P00-017"
-    },
-    "VER-REQ-P00-018": {
-      "command": null,
-      "covers": [
-        "REQ-P00-018"
-      ],
-      "evidence_class": "MACHINE_READABLE_REPORT",
-      "notes": "Mapped but not implemented; must become executable before this requirement can transition to PASS (REQ-G00-007, REQ-AUTO-002).",
-      "required_capabilities": [],
-      "state": "PLANNED",
-      "verifier_id": "VER-REQ-P00-018"
     },
     "VER-REQ-P00-019": {
       "command": null,
@@ -15669,18 +15685,13 @@
         "python",
         "-m",
         "unittest",
-        "tests.contract.test_graph_integrity",
-        "tests.contract.test_cycle_regression",
-        "tests.contract.test_b0_closure",
-        "tests.contract.test_layout",
-        "tests.contract.test_manifest",
-        "tests.contract.test_profiles",
-        "tests.contract.test_release_gates",
-        "tests.contract.test_threat_model",
-        "tests.package.test_package",
-        "tests.package.test_no_runtime_download",
-        "tests.bootstrap.test_start_state",
-        "tests.contract.test_determinism"
+        "discover",
+        "-s",
+        "tests",
+        "-t",
+        ".",
+        "-p",
+        "test_*.py"
       ],
       "covers": [
         "REQ-G00-001",
@@ -15724,7 +15735,7 @@
         "REQ-AUTO-038"
       ],
       "evidence_class": "UNITTEST_REPORT",
-      "notes": "Deterministic offline unittest/pytest-compatible suite. Every test module declares its requirement IDs (REQ-AUTO-005).",
+      "notes": "Deterministic offline unittest suite via discover; every test module declares its requirement IDs (REQ-AUTO-005).",
       "required_capabilities": [],
       "state": "EXECUTABLE",
       "verifier_id": "VER-TEST-SUITE"

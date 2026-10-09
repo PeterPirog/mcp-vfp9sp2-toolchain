@@ -53,6 +53,7 @@ from vfp_toolchain.canonical import (  # noqa: E402
     logical_sha256,
     sorted_id_digest,
 )
+from vfp_toolchain import domain as product_domain  # noqa: E402
 from vfp_toolchain.bootstrap.invocation import (  # noqa: E402
     DEFAULT_AUTHORING_MODE,
     DEFAULT_SCOPE,
@@ -593,7 +594,7 @@ EXECUTABLE_VERIFIERS: tuple[dict[str, Any], ...] = (
     {
         "verifier_id": "VER-TEST-SUITE",
         "state": "EXECUTABLE",
-        "command": ["python", "-m", "unittest", "tests.contract.test_graph_integrity", "tests.contract.test_cycle_regression", "tests.contract.test_b0_closure", "tests.contract.test_layout", "tests.contract.test_manifest", "tests.contract.test_profiles", "tests.contract.test_release_gates", "tests.contract.test_threat_model", "tests.package.test_package", "tests.package.test_no_runtime_download", "tests.bootstrap.test_start_state", "tests.contract.test_determinism"],
+        "command": ["python", "-m", "unittest", "discover", "-s", "tests", "-t", ".", "-p", "test_*.py"],
         "evidence_class": "UNITTEST_REPORT",
         "required_capabilities": [],
         "covers": [
@@ -637,7 +638,43 @@ EXECUTABLE_VERIFIERS: tuple[dict[str, Any], ...] = (
             "REQ-AUTO-036",
             "REQ-AUTO-038",
         ],
-        "notes": "Deterministic offline unittest/pytest-compatible suite. Every test module declares its requirement IDs (REQ-AUTO-005).",
+        "notes": "Deterministic offline unittest suite via discover; every test module declares its requirement IDs (REQ-AUTO-005).",
+    },
+    {
+        "verifier_id": "VER-P00-DIALECT-IDENTITY",
+        "state": "EXECUTABLE",
+        "command": ["python", "tools/verify.py", "dialect-identity"],
+        "evidence_class": "MACHINE_READABLE_REPORT",
+        "required_capabilities": [],
+        "covers": ["REQ-P00-001"],
+        "notes": "Canonical VFP9 SP2 dialect identity gate: exact identifier, identity reporting, negative rejection of older/generic dialect identities, cross-surface consistency.",
+    },
+    {
+        "verifier_id": "VER-P00-WINDOWS-PLATFORM-POLICY",
+        "state": "EXECUTABLE",
+        "command": ["python", "tools/verify.py", "platform-policy"],
+        "evidence_class": "MACHINE_READABLE_REPORT",
+        "required_capabilities": [],
+        "covers": ["REQ-P00-002"],
+        "notes": "Windows-only production platform policy gate: policy boundaries, package metadata, documentation statements, Windows-only CI structure.",
+    },
+    {
+        "verifier_id": "VER-P00-PYTHON-SUPPORT-RANGE",
+        "state": "EXECUTABLE",
+        "command": ["python", "tools/verify.py", "python-support"],
+        "evidence_class": "MACHINE_READABLE_REPORT",
+        "required_capabilities": [],
+        "covers": ["REQ-P00-011"],
+        "notes": "Supported-Python range (>=3.10,<3.15) consistency across pyproject, compatibility manifest, dependency lock, CI matrix, docs, and package runtime reporting. Clean-environment five-minor acceptance evidence is executed by tools/clean_env_smoke.py (typed host-prerequisite blockers when an interpreter is absent).",
+    },
+    {
+        "verifier_id": "VER-P00-SUPPORT-CLAIMS",
+        "state": "EXECUTABLE",
+        "command": ["python", "tools/verify.py", "support-claims"],
+        "evidence_class": "MACHINE_READABLE_REPORT",
+        "required_capabilities": [],
+        "covers": ["REQ-P00-018"],
+        "notes": "Windows-only support-claims verifier over product surfaces (pyproject classifiers, README, docs, CI workflows, release-gate manifests, compatibility manifest) with explicit allow/exclude negation semantics and fail-closed missing-surface handling.",
     },
     {
         "verifier_id": "VER-TEST-EVIDENCE-MAP",
@@ -814,10 +851,10 @@ def build_compatibility_manifest(generator_hash: str, generated_at: str, sot_sha
     artifact: dict[str, Any] = {
         **_meta(sot_sha256, generator_hash, generated_at),
         "artifact_kind": "COMPATIBILITY_MANIFEST",
-        "supported_python_range": ">=3.10,<3.15",
-        "supported_operating_systems": ["Windows"],
-        "target_dialect": "microsoft.visual-foxpro.9.0.sp2",
-        "windows_only": True,
+        "supported_python_range": product_domain.SUPPORTED_PYTHON_RANGE,
+        "supported_operating_systems": list(product_domain.SUPPORTED_OPERATING_SYSTEMS),
+        "target_dialect": product_domain.TARGET_DIALECT,
+        "windows_only": product_domain.WINDOWS_ONLY,
         "tested_baselines": [dict(entry) for entry in TESTED_BASELINES],
         "windows_support_matrix": {
             "TESTED": ["development hosts used for local qualification (recorded per qualification run)"],
@@ -893,7 +930,7 @@ def build_dependency_lock(
         },
         "approved_origins": [],
         "resolver_identity": None,
-        "python_range": ">=3.10,<3.15",
+        "python_range": product_domain.SUPPORTED_PYTHON_RANGE,
         "direct_constraints": direct,
         "optional_profiles": {
             "dev": ["pytest", "jsonschema", "rpds-py", "build", "setuptools", "wheel"],

@@ -1,12 +1,12 @@
 {
   "all_scenario_inputs_declared": true,
   "artifact_kind": "GREENFIELD_SCENARIO_DEFINITIONS",
-  "content_sha256": "05BDC15270FC4715086F444190D25D3C061A29EA06D6522C2EB6E58885E40DD4",
+  "content_sha256": "92C3777600C8039694D8CB4960C7A7863B9669ACA0F2138A633055BBD484B608",
   "execution_timing": "complete scenario execution belongs to the first release-qualification gate, not to B0 (REQ-G00-015)",
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
   "parameter": "authoring_mode",

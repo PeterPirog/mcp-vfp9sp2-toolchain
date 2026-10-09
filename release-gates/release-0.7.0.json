@@ -5,7 +5,7 @@
     "P11_REFACTOR",
     "activated_governance"
   ],
-  "content_sha256": "500E95411C1B8FCBCF9BAEECF0D675AF9A6D4E78A5919D3DC246E4EF7657A17E",
+  "content_sha256": "94A498E991824B268903FA5EF6E88C0814FF9401AD4770B454E94B52A17A7EA9",
   "cumulative_milestones": [
     "P00_DOMAIN",
     "P01_CORE",
@@ -26,10 +26,10 @@
     "0.5.0",
     "0.6.0"
   ],
-  "generated_at_utc": "2026-10-08T02:54:32Z",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
   "generator": {
     "identity": "vfp-toolchain-control-plane-generator",
-    "source_sha256": "66F2E83B74FCC2AF9E35B88A2D7D9623EEFD33BBD32A1872397793628ED3B524",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
     "version": "1.0.0"
   },
   "governance_requirement_ids": [
@@ -86,7 +86,7 @@
     "REQ-R04-001",
     "REQ-R04-002"
   ],
-  "graph_content_sha256": "73C5624AC8B283DCE21CAFC77664DEA2832D2B1B105F45EBDACB016AA123DB70",
+  "graph_content_sha256": "F51E9C54B2A5406DD96B866726359C2C09E1604B8F14818E4D77103FB16A8E2C",
   "qualified": false,
   "qualified_release_record": null,
   "release": "0.7.0",

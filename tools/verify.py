@@ -11,6 +11,10 @@ PASS, 1 on FAIL, 2 on BLOCKED:
     determinism                double-generation logical identity
     no-download                runtime network/package-install sentinel
     test-map                   test-module -> requirement-ID evidence map
+    dialect-identity           VFP9 SP2 dialect identity gate (REQ-P00-001)
+    platform-policy            Windows-only platform policy gate (REQ-P00-002)
+    python-support             supported-Python range gate (REQ-P00-011)
+    support-claims             Windows-only support-claims gate (REQ-P00-018)
     invocation --evidence PATH validate retained invocation evidence
     dependency-lock [--wheelhouse PATH] [--invocation-evidence PATH]
                                verify the frozen canonical dependency lock;
@@ -53,6 +57,10 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("determinism")
     subparsers.add_parser("no-download")
     subparsers.add_parser("test-map")
+    subparsers.add_parser("dialect-identity")
+    subparsers.add_parser("platform-policy")
+    subparsers.add_parser("python-support")
+    subparsers.add_parser("support-claims")
 
     invocation_parser = subparsers.add_parser("invocation")
     invocation_parser.add_argument("--evidence", type=Path, required=True)
@@ -83,6 +91,14 @@ def main(argv: list[str] | None = None) -> int:
         return _emit(engine.no_download_report(_REPO_ROOT))
     if args.command == "test-map":
         return _emit(engine.test_map_report(_REPO_ROOT))
+    if args.command == "dialect-identity":
+        return _emit(engine.dialect_identity_report(_REPO_ROOT))
+    if args.command == "platform-policy":
+        return _emit(engine.platform_policy_report(_REPO_ROOT))
+    if args.command == "python-support":
+        return _emit(engine.python_support_report(_REPO_ROOT))
+    if args.command == "support-claims":
+        return _emit(engine.support_claims_report(_REPO_ROOT))
     if args.command == "invocation":
         return _emit(engine.invocation_report(args.evidence))
     if args.command == "dependency-lock":
