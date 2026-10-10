@@ -1,0 +1,534 @@
+{
+  "artifact_kind": "THREAT_MODEL",
+  "boundaries": [
+    {
+      "assets": [
+        "git refs",
+        "spec/ contract artifacts",
+        "source tree",
+        "evidence/"
+      ],
+      "boundary_id": "REPOSITORY_MUTATION",
+      "controls": [
+        {
+          "id": "CTL-REPO-01",
+          "note": "Trusted integration layer implementation is future work.",
+          "requirements": [
+            "REQ-G00-053",
+            "REQ-AUTO-031",
+            "REQ-AUTO-054",
+            "REQ-AUTO-055"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-REPO-01",
+            "THR-REPO-03"
+          ]
+        },
+        {
+          "id": "CTL-REPO-02",
+          "note": "Determinism checks reject hand-edited logical content.",
+          "requirements": [
+            "REQ-AUTO-038",
+            "REQ-PORT-018"
+          ],
+          "status": "DECLARED",
+          "threats": [
+            "THR-REPO-02"
+          ]
+        }
+      ],
+      "description": "Git repository, refs, working tree, generated contract artifacts.",
+      "threats": [
+        {
+          "description": "Agent or external actor advances main without gates.",
+          "id": "THR-REPO-01",
+          "name": "Unauthorized ref advance"
+        },
+        {
+          "description": "Editing a generated file to fake compliance.",
+          "id": "THR-REPO-02",
+          "name": "Hand-edited generated artifact"
+        },
+        {
+          "description": "Rewriting existing history to hide provenance.",
+          "id": "THR-REPO-03",
+          "name": "History rewrite"
+        }
+      ],
+      "trust_boundary": "Only the trusted integration layer may advance refs; ordinary credentials cannot."
+    },
+    {
+      "assets": [
+        "allowed roots",
+        "immutable source zones",
+        "workspace/output roots"
+      ],
+      "boundary_id": "FILESYSTEM_PATHS_REPARSE",
+      "controls": [
+        {
+          "id": "CTL-PATH-01",
+          "note": "Path policy engine is a Phase 2 deliverable.",
+          "requirements": [
+            "REQ-P02-001",
+            "REQ-P02-010",
+            "REQ-P02-020"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-PATH-01",
+            "THR-PATH-02"
+          ]
+        }
+      ],
+      "description": "Windows path normalization, traversal, junction/symlink/reparse attacks.",
+      "threats": [
+        {
+          "description": "Junction or symlink redirection escapes allowed roots.",
+          "id": "THR-PATH-01",
+          "name": "Path traversal / reparse escape"
+        },
+        {
+          "description": "8.3 or case-insensitive aliases bypass policy.",
+          "id": "THR-PATH-02",
+          "name": "Case/short-name alias confusion"
+        }
+      ],
+      "trust_boundary": "Path policy rejects traversal, reparse escape, alias confusion before any access."
+    },
+    {
+      "assets": [
+        "allowlisted executables",
+        "subprocess env",
+        "VFP workers"
+      ],
+      "boundary_id": "EXTERNAL_PROCESS_EXECUTION",
+      "controls": [
+        {
+          "id": "CTL-PROC-01",
+          "note": "Phase 2 deliverable.",
+          "requirements": [
+            "REQ-P02-013",
+            "REQ-P02-011"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-PROC-01"
+          ]
+        },
+        {
+          "id": "CTL-PROC-02",
+          "note": "Phase 2 deliverable.",
+          "requirements": [
+            "REQ-P02-014"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-PROC-02"
+          ]
+        }
+      ],
+      "description": "Subprocess/COM/VFP/FoxBin2Prg execution surfaces.",
+      "threats": [
+        {
+          "description": "VFP source/data content must never become shell commands.",
+          "id": "THR-PROC-01",
+          "name": "Injection through project content"
+        },
+        {
+          "description": "Inherited secrets reaching helper processes.",
+          "id": "THR-PROC-02",
+          "name": "Env secret leakage to helpers"
+        }
+      ],
+      "trust_boundary": "Explicit allowlist, argument arrays, minimal env, isolated workspace."
+    },
+    {
+      "assets": [
+        "dependency lock",
+        "wheelhouse",
+        "SBOM"
+      ],
+      "boundary_id": "DEPENDENCY_ORIGINS",
+      "controls": [
+        {
+          "id": "CTL-DEP-01",
+          "note": "Canonical GREENFIELD dependency lock resolved exactly once from the approved PyPI origin (authorization OPERATOR-GREENFIELD-PYPI-B0-2026-10-08) and frozen before candidate-tree sealing; automated origin/integrity tamper rejection and lock-update automation remain future work.",
+          "requirements": [
+            "REQ-G00-018",
+            "REQ-G00-022",
+            "REQ-P00-024",
+            "REQ-AUTO-045"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-DEP-01",
+            "THR-DEP-02"
+          ]
+        }
+      ],
+      "description": "Package-index and repository origins for every dependency.",
+      "threats": [
+        {
+          "description": "Dependency installed from an unapproved index.",
+          "id": "THR-DEP-01",
+          "name": "Unapproved origin / shadow package"
+        },
+        {
+          "description": "Re-resolving after the candidate tree is sealed.",
+          "id": "THR-DEP-02",
+          "name": "Floating re-resolution"
+        }
+      ],
+      "trust_boundary": "Approved origins only; exact artifact hashes; no floating re-resolution after sealing."
+    },
+    {
+      "assets": [
+        "VFP executables",
+        "COM registrations",
+        "operator apps"
+      ],
+      "boundary_id": "VFP_INTEGRATION",
+      "controls": [
+        {
+          "id": "CTL-VFP-01",
+          "note": "No VFP assets exist in this repository; scan-based control.",
+          "requirements": [
+            "REQ-P00-025"
+          ],
+          "status": "DECLARED",
+          "threats": [
+            "THR-VFP-01"
+          ]
+        },
+        {
+          "id": "CTL-VFP-02",
+          "note": "Phase 2/6 deliverable.",
+          "requirements": [
+            "REQ-P02-013"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-VFP-02"
+          ]
+        }
+      ],
+      "description": "Operator-provided VFP9 SP2 runtime, COM automation, interactive sessions.",
+      "threats": [
+        {
+          "description": "Vendoring licensed Microsoft assets into public artifacts.",
+          "id": "THR-VFP-01",
+          "name": "Proprietary asset redistribution"
+        },
+        {
+          "description": "Executing analyzed project code outside an isolated workspace.",
+          "id": "THR-VFP-02",
+          "name": "Application source execution"
+        }
+      ],
+      "trust_boundary": "Operator-provided assets only; never vendored; trusted-profile execution only."
+    },
+    {
+      "assets": [
+        "datasets",
+        "Memo content",
+        "profiles"
+      ],
+      "boundary_id": "DBF_BINARY_DATA_HANDLING",
+      "controls": [
+        {
+          "id": "CTL-DATA-01",
+          "note": "Redaction engine is Phase 2+ deliverable.",
+          "requirements": [
+            "REQ-P02-006",
+            "REQ-AUTO-046"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-DATA-01"
+          ]
+        },
+        {
+          "id": "CTL-DATA-02",
+          "note": "Fuzz/property coverage is Phase 4+ deliverable.",
+          "requirements": [
+            "REQ-AUTO-016"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-DATA-02"
+          ]
+        }
+      ],
+      "description": "DBF/FPT/CDX binary parsing, Memo handling, original-value exposure.",
+      "threats": [
+        {
+          "description": "Private values appearing in logs, evidence, or MCP responses.",
+          "id": "THR-DATA-01",
+          "name": "Memo/original-value leakage"
+        },
+        {
+          "description": "Malformed binaries crashing or confusing the engine.",
+          "id": "THR-DATA-02",
+          "name": "Corrupt/malicious DBF input"
+        }
+      ],
+      "trust_boundary": "dbfbridge public API only; original values never leak into logs/evidence/prompts."
+    },
+    {
+      "assets": [
+        "shadow database",
+        "migration state",
+        "credentials"
+      ],
+      "boundary_id": "POSTGRESQL_BOUNDARY",
+      "controls": [
+        {
+          "id": "CTL-PG-01",
+          "note": "Phase 13+ deliverable.",
+          "requirements": [
+            "REQ-P01-019",
+            "REQ-AUTO-046"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-PG-01"
+          ]
+        },
+        {
+          "id": "CTL-PG-02",
+          "note": "Bounded connection management is Phase 13 deliverable.",
+          "requirements": [
+            "REQ-P13-024"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-PG-02"
+          ]
+        }
+      ],
+      "description": "Shadow/migration target database, credentials, cross-engine parity.",
+      "threats": [
+        {
+          "description": "PostgreSQL secrets in config/evidence/logs.",
+          "id": "THR-PG-01",
+          "name": "Credential exposure"
+        },
+        {
+          "description": "Migration writing outside controlled staging.",
+          "id": "THR-PG-02",
+          "name": "Unbounded writes to target"
+        }
+      ],
+      "trust_boundary": "Explicit target references; bounded connections; no implicit prod writes."
+    },
+    {
+      "assets": [
+        "tool registry",
+        "resource templates",
+        "protocol envelopes"
+      ],
+      "boundary_id": "MCP_TRANSPORT",
+      "controls": [
+        {
+          "id": "CTL-MCP-01",
+          "note": "Truthful capability state enforced by design and tests.",
+          "requirements": [
+            "REQ-P01-012",
+            "REQ-G00-004"
+          ],
+          "status": "DECLARED",
+          "threats": [
+            "THR-MCP-01"
+          ]
+        },
+        {
+          "id": "CTL-MCP-02",
+          "note": "Phase 2 deliverable.",
+          "requirements": [
+            "REQ-P02-012"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-MCP-02"
+          ]
+        }
+      ],
+      "description": "MCP protocol transport (stdio/HTTP), tool/resource schemas, client trust.",
+      "threats": [
+        {
+          "description": "Simulating unfinished features as success.",
+          "id": "THR-MCP-01",
+          "name": "Placeholder success for missing capability"
+        },
+        {
+          "description": "Project-controlled content altering protocol structure.",
+          "id": "THR-MCP-02",
+          "name": "Injection via tool arguments/data"
+        }
+      ],
+      "trust_boundary": "Thin adapter over Core; unavailable capabilities reported truthfully."
+    },
+    {
+      "assets": [
+        "evidence/",
+        "provenance records",
+        "qualified-release records"
+      ],
+      "boundary_id": "EVIDENCE_PROVENANCE",
+      "controls": [
+        {
+          "id": "CTL-EVID-01",
+          "note": "Compliance store is Phase 2A deliverable.",
+          "requirements": [
+            "REQ-AUTO-049"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-EVID-01"
+          ]
+        },
+        {
+          "id": "CTL-EVID-02",
+          "note": "Leakage scans are Phase 2A deliverable.",
+          "requirements": [
+            "REQ-AUTO-046"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-EVID-02"
+          ]
+        }
+      ],
+      "description": "Machine-readable evidence, hashes, provenance bundles.",
+      "threats": [
+        {
+          "description": "Old PASS evidence reused after bound inputs changed.",
+          "id": "THR-EVID-01",
+          "name": "Stale evidence reuse"
+        },
+        {
+          "description": "Original DBF values or secrets entering evidence.",
+          "id": "THR-EVID-02",
+          "name": "Sensitive data in evidence"
+        }
+      ],
+      "trust_boundary": "Evidence is freshness-bound to exact commit/tree/SOT/lock identities; sensitive classes redacted."
+    },
+    {
+      "assets": [
+        "controller checkout",
+        "runtime config",
+        "external SOT copy"
+      ],
+      "boundary_id": "AGENT_CONTROLLER_TRUST",
+      "controls": [
+        {
+          "id": "CTL-AGT-01",
+          "note": "Independent review executions are workflow-level.",
+          "requirements": [
+            "REQ-G00-057",
+            "REQ-AUTO-048"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-AGT-01"
+          ]
+        },
+        {
+          "id": "CTL-AGT-02",
+          "note": "OS write-protection boundary is AUTONOMOUS-path work.",
+          "requirements": [
+            "REQ-G00-074",
+            "REQ-PORT-039"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-AGT-02"
+          ]
+        }
+      ],
+      "description": "Coding-agent/controller boundary, model routing, write protection.",
+      "threats": [
+        {
+          "description": "Authoring agent counting its own review as independent.",
+          "id": "THR-AGT-01",
+          "name": "Builder self-approval"
+        },
+        {
+          "description": "Model-authored process editing the frozen contract.",
+          "id": "THR-AGT-02",
+          "name": "SOT mutation by model identity"
+        }
+      ],
+      "trust_boundary": "Builder never self-approves; controller pinned by commit/tree; SOT write-protected for model-authored runs."
+    },
+    {
+      "assets": [
+        "canonical remote",
+        "release assets",
+        "attestations"
+      ],
+      "boundary_id": "REMOTE_INTEGRATION_PUBLICATION",
+      "controls": [
+        {
+          "id": "CTL-REM-01",
+          "note": "Remote scopes inactive under LOCAL_QUALIFICATION.",
+          "requirements": [
+            "REQ-G00-053",
+            "REQ-AUTO-031"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-REM-01"
+          ]
+        },
+        {
+          "id": "CTL-REM-02",
+          "note": "Publication automation is future work.",
+          "requirements": [
+            "REQ-AUTO-027",
+            "REQ-AUTO-029",
+            "REQ-AUTO-047"
+          ],
+          "status": "PLANNED",
+          "threats": [
+            "THR-REM-02"
+          ]
+        }
+      ],
+      "description": "Remote refs, PRs, CI checks, releases, package publication.",
+      "threats": [
+        {
+          "description": "Remote mutation without authorization.",
+          "id": "THR-REM-01",
+          "name": "Unauthorized push/publication"
+        },
+        {
+          "description": "Release artifacts without a qualified-release record.",
+          "id": "THR-REM-02",
+          "name": "Publishing unqualified content"
+        }
+      ],
+      "trust_boundary": "Explicit operator authorization bound to invocation hash and destination identity; local qualification stays available."
+    }
+  ],
+  "content_sha256": "630E44EB19AE047F5BC7198A1480E313C7A04F2E806746A27D97CF410FE1E739",
+  "control_status_vocabulary": [
+    "DECLARED",
+    "PLANNED",
+    "PASS"
+  ],
+  "generated_at_utc": "2026-10-08T19:28:42Z",
+  "generator": {
+    "identity": "vfp-toolchain-control-plane-generator",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
+    "version": "1.0.0"
+  },
+  "methodology": "STRIDE-style structured boundaries; statuses DECLARED/PLANNED only",
+  "model_version": 1,
+  "notes": "Mitigations are never marked PASS merely because they are declared; PASS requires executed deterministic evidence.",
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61"
+}

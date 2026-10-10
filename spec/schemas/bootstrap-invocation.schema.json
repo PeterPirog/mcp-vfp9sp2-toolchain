@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/bootstrap-invocation.schema.json",
+  "title": "Bootstrap invocation logical object and retained run evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "invocation_schema_version",
+    "project_home",
+    "bootstrap_sot_path",
+    "repo_root",
+    "operation_scope",
+    "authoring_mode",
+    "resolved_defaults"
+  ],
+  "properties": {
+    "invocation_schema_version": { "type": "integer", "const": 1 },
+    "project_home": { "$ref": "#/$defs/windowsPath" },
+    "bootstrap_sot_path": { "$ref": "#/$defs/windowsPath" },
+    "repo_root": { "$ref": "#/$defs/windowsPath" },
+    "temp_root": { "$ref": "#/$defs/windowsPath" },
+    "venv_root": { "$ref": "#/$defs/windowsPath" },
+    "cache_roots": { "type": "array", "items": { "$ref": "#/$defs/windowsPath" } },
+    "tool_roots": { "type": "array", "items": { "$ref": "#/$defs/windowsPath" } },
+    "operation_scope": { "enum": ["LOCAL_QUALIFICATION", "REMOTE_INTEGRATION", "PUBLICATION"] },
+    "authoring_mode": { "enum": ["MANUAL", "AUTONOMOUS", "HYBRID"] },
+    "execution_adapter": { "type": ["string", "null"] },
+    "autonomous_model_routing_ref": { "type": ["string", "null"] },
+    "remote_authorization_ref": { "type": ["string", "null"] },
+    "repository_origin": { "type": ["string", "null"] },
+    "target_ref": { "type": ["string", "null"] },
+    "resolved_defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_scope_default", "authoring_mode_default"],
+      "properties": {
+        "operation_scope_default": { "const": "LOCAL_QUALIFICATION" },
+        "authoring_mode_default": { "const": "MANUAL" }
+      }
+    }
+  },
+  "$defs": {
+    "windowsPath": {
+      "type": "string",
+      "minLength": 3,
+      "not": { "pattern": "[<>\"|?*]" }
+    }
+  }
+}

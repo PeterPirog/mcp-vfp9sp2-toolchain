@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/capability-snapshot.schema.json",
+  "title": "Capability snapshot (truthful implemented-capability state)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_kind",
+    "catalog_version",
+    "state_vocabulary",
+    "capability_classes",
+    "capabilities",
+    "implemented_count",
+    "declared_count"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "snapshot_kind": { "const": "CAPABILITY_SNAPSHOT" },
+    "catalog_version": { "type": "integer", "minimum": 1 },
+    "state_vocabulary": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "enum": ["UNASSESSED", "PLANNED", "NOT_IMPLEMENTED", "PARTIAL", "BLOCKED", "PASS", "NOT_APPLICABLE"]
+      }
+    },
+    "capability_classes": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "enum": ["PURE_READ", "PURE_WRITE_COPY", "VFP_READ_ENHANCED", "VFP_WRITE_WORKSPACE", "VFP_BUILD_VALIDATE", "PRIVACY_SENSITIVE", "SOURCE_PROMOTION"]
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "available", "state", "activation_milestone", "capability_classes"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "available": { "type": "boolean" },
+          "state": {
+            "enum": ["UNASSESSED", "PLANNED", "NOT_IMPLEMENTED", "PARTIAL", "BLOCKED", "PASS", "NOT_APPLICABLE"]
+          },
+          "activation_milestone": { "type": "string" },
+          "capability_classes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "implemented_count": { "type": "integer", "minimum": 0 },
+    "declared_count": { "type": "integer", "minimum": 0 },
+    "note": { "type": "string" },
+    "content_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" }
+  }
+}

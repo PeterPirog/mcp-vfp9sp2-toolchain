@@ -1,0 +1,216 @@
+{
+  "artifact_kind": "READINESS_GATE",
+  "content_sha256": "A02A6BD6123E6A7B6FC4424942A5C6BF3E57B5FA83BF4AB5E4A3D8DA45E82ECE",
+  "context": {
+    "authoring_mode": "HYBRID",
+    "operation_scope": "LOCAL_QUALIFICATION",
+    "release_context": "NONE",
+    "release_profile": "NONE",
+    "start_mode": "BROWNFIELD"
+  },
+  "derivation": "lifecycle=BOOTSTRAP AND applicability(ctx) = true, plus transitive prerequisites",
+  "directly_selected_count": 106,
+  "excluded_by_applicability": [
+    {
+      "id": "REQ-B00-001",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-B00-002",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-002",
+      "rule": "START_AMBIGUOUS"
+    },
+    {
+      "id": "REQ-G00-003",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-004",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-005",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-006",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-007",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-008",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-010",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-011",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-012",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-015",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-016",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-017",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-018",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-019",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-021",
+      "rule": "GREENFIELD_ONLY"
+    },
+    {
+      "id": "REQ-G00-022",
+      "rule": "GREENFIELD_ONLY"
+    }
+  ],
+  "gate": "BR0",
+  "gate_result": "PLANNED",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
+  "generator": {
+    "identity": "vfp-toolchain-control-plane-generator",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
+    "version": "1.0.0"
+  },
+  "graph_content_sha256": "F51E9C54B2A5406DD96B866726359C2C09E1604B8F14818E4D77103FB16A8E2C",
+  "qualified": false,
+  "requirement_count": 106,
+  "requirement_id_digest": "C28D2E1CCC89100DD835BB19CDF8CC20A1DA6A4F540EC5C70F4FDC82CFF9412A",
+  "requirement_ids": [
+    "REQ-AUTO-001",
+    "REQ-AUTO-002",
+    "REQ-AUTO-003",
+    "REQ-AUTO-004",
+    "REQ-AUTO-005",
+    "REQ-AUTO-040",
+    "REQ-AUTO-041",
+    "REQ-AUTO-042",
+    "REQ-B00-003",
+    "REQ-B00-004",
+    "REQ-G00-001",
+    "REQ-G00-013",
+    "REQ-G00-023",
+    "REQ-G00-024",
+    "REQ-G00-025",
+    "REQ-G00-026",
+    "REQ-G00-027",
+    "REQ-G00-028",
+    "REQ-G00-029",
+    "REQ-G00-030",
+    "REQ-G00-031",
+    "REQ-G00-032",
+    "REQ-G00-033",
+    "REQ-G00-034",
+    "REQ-G00-035",
+    "REQ-G00-036",
+    "REQ-G00-037",
+    "REQ-G00-038",
+    "REQ-G00-039",
+    "REQ-G00-040",
+    "REQ-G00-041",
+    "REQ-G00-042",
+    "REQ-G00-043",
+    "REQ-G00-044",
+    "REQ-G00-045",
+    "REQ-G00-046",
+    "REQ-G00-047",
+    "REQ-G00-048",
+    "REQ-G00-049",
+    "REQ-G00-050",
+    "REQ-G00-051",
+    "REQ-G00-052",
+    "REQ-G00-053",
+    "REQ-G00-054",
+    "REQ-G00-055",
+    "REQ-G00-056",
+    "REQ-G00-057",
+    "REQ-G00-058",
+    "REQ-G00-059",
+    "REQ-G00-060",
+    "REQ-G00-061",
+    "REQ-G00-062",
+    "REQ-G00-063",
+    "REQ-G00-064",
+    "REQ-G00-065",
+    "REQ-G00-066",
+    "REQ-G00-067",
+    "REQ-G00-068",
+    "REQ-G00-069",
+    "REQ-G00-070",
+    "REQ-G00-071",
+    "REQ-G00-072",
+    "REQ-G00-073",
+    "REQ-G00-074",
+    "REQ-P00-020",
+    "REQ-P00-021",
+    "REQ-P00-022",
+    "REQ-PORT-001",
+    "REQ-PORT-002",
+    "REQ-PORT-003",
+    "REQ-PORT-004",
+    "REQ-PORT-005",
+    "REQ-PORT-006",
+    "REQ-PORT-007",
+    "REQ-PORT-008",
+    "REQ-PORT-009",
+    "REQ-PORT-010",
+    "REQ-PORT-011",
+    "REQ-PORT-012",
+    "REQ-PORT-013",
+    "REQ-PORT-014",
+    "REQ-PORT-015",
+    "REQ-PORT-016",
+    "REQ-PORT-017",
+    "REQ-PORT-018",
+    "REQ-PORT-019",
+    "REQ-PORT-020",
+    "REQ-PORT-021",
+    "REQ-PORT-022",
+    "REQ-PORT-023",
+    "REQ-PORT-024",
+    "REQ-PORT-025",
+    "REQ-PORT-026",
+    "REQ-PORT-027",
+    "REQ-PORT-028",
+    "REQ-PORT-029",
+    "REQ-PORT-030",
+    "REQ-PORT-031",
+    "REQ-PORT-032",
+    "REQ-PORT-033",
+    "REQ-PORT-034",
+    "REQ-PORT-035",
+    "REQ-PORT-036",
+    "REQ-PORT-037",
+    "REQ-PORT-038",
+    "REQ-PORT-039"
+  ],
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61",
+  "start_mode": "BROWNFIELD",
+  "transitive_prerequisites_added": []
+}

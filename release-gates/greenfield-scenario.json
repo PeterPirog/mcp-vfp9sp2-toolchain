@@ -1,0 +1,86 @@
+{
+  "all_scenario_inputs_declared": true,
+  "artifact_kind": "GREENFIELD_SCENARIO_DEFINITIONS",
+  "content_sha256": "92C3777600C8039694D8CB4960C7A7863B9669ACA0F2138A633055BBD484B608",
+  "execution_timing": "complete scenario execution belongs to the first release-qualification gate, not to B0 (REQ-G00-015)",
+  "generated_at_utc": "2026-10-08T19:28:42Z",
+  "generator": {
+    "identity": "vfp-toolchain-control-plane-generator",
+    "source_sha256": "12A36DFF88F850EAD313351CC81AC0489AF2FD54136F39673C9F1B44B20F8F5A",
+    "version": "1.0.0"
+  },
+  "parameter": "authoring_mode",
+  "scenario_hash_algorithm": "canonical logical sha256 per variant",
+  "schema_version": 1,
+  "sot_revision": 35,
+  "sot_sha256": "EC4F3AC6A8C03E8C20804338FBDC57BDE89A023C873DAB2219A0050847C5CD61",
+  "target": "first qualified release (0.4.0) without hand-created generated manifests",
+  "variants": {
+    "AUTONOMOUS": {
+      "embedded_contract": "AUTONOMOUS_BOOTSTRAP_V1",
+      "human_source_editing_allowed": false,
+      "phases": [
+        "bind_and_canonicalize_inputs",
+        "hash_source_of_truth",
+        "derive_and_classify_repo_root",
+        "acquire_and_verify_controller",
+        "resolve_and_freeze_model_routing",
+        "create_or_prepare_bootstrap_seed",
+        "seal_and_verify_bootstrap_candidate",
+        "run_bootstrap_or_brownfield_preflight",
+        "create_or_advance_trusted_bootstrap_seed_commit",
+        "evaluate_B0_or_BR0",
+        "generate_external_controller_runtime_config",
+        "establish_and_verify_external_sot_write_protection",
+        "run_controller_environment_preflight",
+        "run_autonomous_model_preflight",
+        "handoff_seed_config_protection_and_routing"
+      ],
+      "undeclared_human_source_edit": "forbidden"
+    },
+    "HYBRID": {
+      "actor_attribution": "required for every candidate change (REQ-G00-055)",
+      "agent_source_editing_allowed": true,
+      "embedded_contract": "MANUAL_BOOTSTRAP_V1",
+      "human_source_editing_allowed": true,
+      "phases": [
+        "bind_and_canonicalize_inputs",
+        "hash_source_of_truth",
+        "derive_repo_root",
+        "inspect_and_classify_before_mutation",
+        "prepare_start_mode_workspace",
+        "materialize_exact_source_of_truth",
+        "build_bootstrap_control_plane_candidate",
+        "generate_generic_profile_and_verifier_dispatch",
+        "seal_candidate_tree",
+        "run_bootstrap_preflight",
+        "create_or_advance_trusted_local_bootstrap_commit",
+        "verify_committed_tree_and_working_state",
+        "evaluate_B0_or_BR0",
+        "handoff_to_committed_generic_profile"
+      ],
+      "phases_note": "manual or agent authoring steps permitted; both carry actor attribution; phases mirror MANUAL_BOOTSTRAP_V1"
+    },
+    "MANUAL": {
+      "actor_attribution": "not required beyond MANUAL provenance",
+      "embedded_contract": "MANUAL_BOOTSTRAP_V1",
+      "human_source_editing_allowed": true,
+      "phases": [
+        "bind_and_canonicalize_inputs",
+        "hash_source_of_truth",
+        "derive_repo_root",
+        "inspect_and_classify_before_mutation",
+        "prepare_start_mode_workspace",
+        "materialize_exact_source_of_truth",
+        "build_bootstrap_control_plane_candidate",
+        "generate_generic_profile_and_verifier_dispatch",
+        "seal_candidate_tree",
+        "run_bootstrap_preflight",
+        "create_or_advance_trusted_local_bootstrap_commit",
+        "verify_committed_tree_and_working_state",
+        "evaluate_B0_or_BR0",
+        "handoff_to_committed_generic_profile"
+      ]
+    }
+  }
+}

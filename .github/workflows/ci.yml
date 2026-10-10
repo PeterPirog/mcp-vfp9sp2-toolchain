@@ -1,0 +1,123 @@
+name: ci
+
+# Windows-only CI scaffolding (REQ-G00-004 / REQ-G00-005 / REQ-P00-018).
+#
+# Product CI acceptance runs on Windows runners only, for every supported
+# Python minor (3.10-3.14, REQ-P00-011). Linux/macOS product jobs are
+# forbidden: non-Windows behavior is never product acceptance scope.
+#
+# Two jobs:
+#  * contract — stdlib-only deterministic contract checks; runs green with no
+#    third-party packages.
+#  * build-install — clean wheel/sdist build and clean-environment install;
+#    FAILS CLOSED until spec/dependency-lock.json is resolved (the bootstrap
+#    dependency lock requires an explicitly operator-approved package-index
+#    origin, REQ-G00-022). It must never silently install floating deps.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contract:
+    name: contract-self-consistency-${{ matrix.python }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python }}"
+
+      - name: Contract self-consistency (stdlib only)
+        shell: pwsh
+        run: python tools/verify.py self-consistency
+
+      - name: Canonical layout
+        shell: pwsh
+        run: python tools/verify.py layout
+
+      - name: Package foundation (offline subset)
+        shell: pwsh
+        run: python tools/verify.py package
+
+      - name: Control-plane determinism
+        shell: pwsh
+        run: python tools/verify.py determinism
+
+      - name: No-runtime-download sentinel
+        shell: pwsh
+        run: python tools/verify.py no-download
+
+      # P00_DOMAIN product/platform identity gates (REQ-P00-001/002/011/018):
+      # Windows-only dialect identity, Windows-only platform policy, the
+      # canonical supported-Python range, and the Windows-only
+      # support-claims enforcement. The product CI matrix below stays
+      # Windows-only by design; Linux/macOS product jobs are forbidden.
+      - name: Dialect identity gate (VFP9 SP2 only)
+        shell: pwsh
+        run: python tools/verify.py dialect-identity
+
+      - name: Windows-only platform policy gate
+        shell: pwsh
+        run: python tools/verify.py platform-policy
+
+      - name: Supported-Python range gate (>=3.10,<3.15)
+        shell: pwsh
+        run: python tools/verify.py python-support
+
+      - name: Windows-only support-claims gate
+        shell: pwsh
+        run: python tools/verify.py support-claims
+
+      - name: Test suite (stdlib runner; pytest-compatible)
+        shell: pwsh
+        run: python -m unittest discover -s tests -t . -p "test_*.py"
+
+  build-install:
+    name: clean-build-install
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Fail closed: builds/installs consume the frozen canonical dependency
+      # lock. A missing or unresolved lock is a hard error, never a silent
+      # fallback to floating resolution (REQ-G00-018 / REQ-G00-022).
+      - name: Require resolved dependency lock
+        shell: pwsh
+        run: |
+          $lockPath = 'spec/dependency-lock.json'
+          if (-not (Test-Path $lockPath)) {
+            Write-Error "DEPENDENCY_LOCK_MISSING: $lockPath must exist before build/install."
+            exit 1
+          }
+          $lock = Get-Content $lockPath -Raw | ConvertFrom-Json
+          if ($lock.resolution_status -ne 'RESOLVED_FROZEN') {
+            Write-Error "DEPENDENCY_LOCK_NOT_FROZEN: resolution_status=$($lock.resolution_status) - an operator-approved GREENFIELD package-index origin is required."
+            exit 1
+          }
+
+      - name: Install locked dev profile (hash-pinned, exact versions)
+        shell: pwsh
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r spec/dependency-lock.wheelhouse.txt
+
+      - name: Build wheel and sdist from the frozen lock (no network)
+        shell: pwsh
+        run: |
+          python -m build --no-isolation
+        # The build backend (setuptools) and frontend helpers come from the
+        # hash-pinned lock install above; build isolation is disabled so the
+        # build never downloads anything outside the frozen dependency set.
