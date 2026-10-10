@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/threat-model.schema.json",
+  "title": "Versioned machine-readable threat model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sot_revision",
+    "sot_sha256",
+    "generator",
+    "content_sha256",
+    "artifact_kind",
+    "model_version",
+    "methodology",
+    "control_status_vocabulary",
+    "boundaries",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "sot_revision": { "type": "integer" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "generated_at_utc": { "type": "string" },
+    "content_sha256": { "$ref": "#/$defs/sha256" },
+    "generator": { "$ref": "#/$defs/generator" },
+    "artifact_kind": { "const": "THREAT_MODEL" },
+    "model_version": { "type": "integer", "const": 1 },
+    "methodology": { "type": "string" },
+    "control_status_vocabulary": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "enum": ["DECLARED", "PLANNED", "PASS"] }
+    },
+    "boundaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/boundary" }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version", "source_sha256"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boundary_id", "description", "assets", "trust_boundary", "threats", "controls"],
+      "properties": {
+        "boundary_id": { "type": "string" },
+        "description": { "type": "string" },
+        "assets": { "type": "array", "items": { "type": "string" } },
+        "trust_boundary": { "type": "string" },
+        "threats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "description"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^THR-[A-Z]+-\\d{2}$" },
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "threats", "requirements", "status", "note"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^CTL-[A-Z]+-\\d{2}$" },
+              "threats": { "type": "array", "items": { "type": "string" } },
+              "requirements": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+              "status": { "enum": ["DECLARED", "PLANNED", "PASS"] },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "reqId": { "type": "string", "pattern": "^REQ-[A-Z0-9]+-\\d{3}$" }
+  }
+}

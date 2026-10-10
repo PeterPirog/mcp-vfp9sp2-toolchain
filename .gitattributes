@@ -1,0 +1,48 @@
+# Deterministic repository text normalization (REQ-G00-017).
+# Default: normalize text files to LF in the repository.
+* text=auto
+
+# Windows scripts keep explicit CRLF line endings.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Source/config text keeps LF.
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+
+# The frozen Source of Truth copy must never be normalized or regenerated
+# into different bytes (REQ-G00-023): treat it as byte-exact non-text.
+spec/SOURCE_OF_TRUTH.md -text
+
+# VFP binary/data artifact families are non-text: Git line-ending conversion
+# must never mutate them, and byte-exact fixtures stay byte-exact.
+*.dbf -text
+*.fpt -text
+*.cdx -text
+*.idx -text
+*.scx -text
+*.sct -text
+*.vcx -text
+*.vct -text
+*.frx -text
+*.frt -text
+*.lbx -text
+*.lbt -text
+*.mnx -text
+*.mnt -text
+*.pjx -text
+*.pjt -text
+*.dbc -text
+*.dct -text
+*.dcx -text
+
+# Byte-exact vendored snapshots are non-text.
+third_party/** -text

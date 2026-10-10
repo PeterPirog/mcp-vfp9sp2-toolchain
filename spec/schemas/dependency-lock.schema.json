@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/dependency-lock.schema.json",
+  "title": "Canonical dependency lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sot_revision",
+    "sot_sha256",
+    "generator",
+    "content_sha256",
+    "artifact_kind",
+    "lock_role",
+    "resolution_status",
+    "python_range",
+    "direct_constraints",
+    "optional_profiles",
+    "approved_origins",
+    "resolved",
+    "transitive_artifacts",
+    "post_seal_policy"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "sot_revision": { "type": "integer" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "generated_at_utc": { "type": "string" },
+    "content_sha256": { "$ref": "#/$defs/sha256" },
+    "generator": { "$ref": "#/$defs/generator" },
+    "artifact_kind": { "const": "DEPENDENCY_LOCK" },
+    "lock_role": { "enum": ["GREENFIELD_BOOTSTRAP", "GREENFIELD_RELEASE", "BROWNFIELD_BASELINE"] },
+    "resolution_status": {
+      "enum": [
+        "PENDING_AWAITING_APPROVED_ORIGIN",
+        "RESOLVED_FROZEN",
+        "RESOLUTION_FAILED"
+      ]
+    },
+    "blocker": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": { "code": { "type": "string" }, "message": { "type": "string" } }
+        }
+      ]
+    },
+    "approved_origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["origin", "authorization_ref"],
+        "properties": {
+          "origin": { "type": "string" },
+          "authorization_ref": { "type": "string" }
+        }
+      }
+    },
+    "resolver_identity": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "version"],
+          "properties": { "tool": { "type": "string" }, "version": { "type": "string" } }
+        }
+      ]
+    },
+    "python_range": { "const": ">=3.10,<3.15" },
+    "direct_constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "build", "test", "schema_validation"],
+      "properties": {
+        "runtime": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+        "build": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+        "test": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+        "schema_validation": { "type": "array", "items": { "$ref": "#/$defs/constraint" } }
+      }
+    },
+    "optional_profiles": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "resolved": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resolved_at_invocation_hash", "distributions"],
+          "properties": {
+            "resolved_at_invocation_hash": { "$ref": "#/$defs/sha256" },
+            "distributions": { "type": "array", "items": { "$ref": "#/$defs/resolvedDistribution" } }
+          }
+        }
+      ]
+    },
+    "transitive_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filename", "distribution", "version", "sha256"],
+        "properties": {
+          "filename": { "type": "string" },
+          "distribution": { "type": "string" },
+          "version": { "type": "string" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "post_seal_policy": { "type": "string" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version", "source_sha256"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution", "constraint", "reason"],
+      "properties": {
+        "distribution": { "type": "string" },
+        "constraint": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    },
+    "resolvedDistribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution", "version", "artifact_filename", "sha256", "profile_membership", "origin"],
+      "properties": {
+        "distribution": { "type": "string" },
+        "version": { "type": "string" },
+        "artifact_filename": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "profile_membership": { "type": "array", "items": { "type": "string" } },
+        "origin": { "type": "string" }
+      }
+    }
+  }
+}

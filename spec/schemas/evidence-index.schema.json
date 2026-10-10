@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/evidence-index.schema.json",
+  "title": "Evidence index (conventions registry for retained run evidence)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "index_kind", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "index_kind": { "const": "EVIDENCE_INDEX" },
+    "generated_at_utc": { "type": "string" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "content_sha256": { "$ref": "#/$defs/sha256" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "evidence_kind", "sensitivity_class", "logical_sha256"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "evidence_kind": { "type": "string" },
+          "sensitivity_class": { "enum": ["PUBLIC", "SECURE_LOCAL", "REDACTED"] },
+          "logical_sha256": { "$ref": "#/$defs/sha256" },
+          "bound_commit": { "type": ["string", "null"] },
+          "bound_tree": { "type": ["string", "null"] },
+          "bound_sot_sha256": { "type": ["string", "null"] },
+          "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/reqId" } },
+          "redaction_policy": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "reqId": { "type": "string", "pattern": "^REQ-[A-Z0-9]+-\\d{3}$" }
+  }
+}

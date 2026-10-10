@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/brownfield-start-baseline.schema.json",
+  "title": "BROWNFIELD_PREFLIGHT / BROWNFIELD_BOOTSTRAP_PREFLIGHT / start-baseline evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_kind",
+    "capture_schema_version",
+    "bootstrap_invocation_logical_sha256",
+    "sot_sha256",
+    "canonical_product_repository_identity",
+    "effective_target_ref",
+    "git_head_commit",
+    "git_head_tree",
+    "authoritative_content_identity",
+    "clean_working_state"
+  ],
+  "properties": {
+    "evidence_kind": {
+      "enum": ["BROWNFIELD_PREFLIGHT", "BROWNFIELD_BOOTSTRAP_PREFLIGHT", "BROWNFIELD_START_BASELINE"]
+    },
+    "capture_schema_version": { "type": "integer", "minimum": 1 },
+    "bootstrap_invocation_logical_sha256": { "$ref": "#/$defs/sha256" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "canonical_product_repository_identity": { "type": "string" },
+    "local_repository_origin": { "type": ["string", "null"] },
+    "effective_target_ref": { "type": "string", "pattern": "^refs/heads/.+$" },
+    "git_head_commit": { "$ref": "#/$defs/gitSha" },
+    "git_head_tree": { "$ref": "#/$defs/gitSha" },
+    "bootstrap_commit": { "type": ["string", "null"] },
+    "bootstrap_tree": { "type": ["string", "null"] },
+    "candidate_tree_sha256": { "type": ["string", "null"] },
+    "authoritative_content_identity": { "$ref": "#/$defs/sha256" },
+    "clean_working_state": { "$ref": "#/$defs/cleanState" },
+    "ignored_local_state": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["global_ignore_disabled", "entries", "inventory_sha256"],
+          "properties": {
+            "global_ignore_disabled": { "const": true },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "entry_type", "reparse_class"],
+                "properties": {
+                  "path": { "type": "string" },
+                  "entry_type": { "enum": ["file", "directory", "other"] },
+                  "reparse_class": { "enum": ["NONE", "SYMLINK", "JUNCTION", "REPARSE_OTHER"] }
+                }
+              }
+            },
+            "inventory_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      ]
+    },
+    "submodule_identities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "commit"],
+        "properties": { "path": { "type": "string" }, "commit": { "$ref": "#/$defs/gitSha" } }
+      }
+    },
+    "public_surface_inventory": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inventory_sha256"],
+          "properties": { "inventory_sha256": { "$ref": "#/$defs/sha256" } }
+        }
+      ]
+    },
+    "verification_result": { "enum": ["PASS", "FAIL", "BLOCKED", "PLANNED", "NOT_APPLICABLE"] },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "gitSha": { "type": "string", "pattern": "^[0-9A-Fa-f]{40}$" },
+    "cleanState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staged_modified_deleted_conflicted_free", "non_ignored_untracked_free"],
+      "properties": {
+        "staged_modified_deleted_conflicted_free": { "const": true },
+        "non_ignored_untracked_free": { "const": true }
+      }
+    }
+  }
+}

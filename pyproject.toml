@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-vfp9sp2-toolchain"
+version = "0.0.0.dev0"
+description = "Windows-local MCP platform for Microsoft Visual FoxPro 9.0 SP2 applications (bootstrap foundation build)"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+keywords = ["visual-foxpro", "vfp9", "dbf", "mcp", "postgresql", "windows"]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Database",
+  "Topic :: Software Development :: Code Generators",
+]
+
+# Bootstrap foundation build: the runtime has NO third-party dependencies.
+# Every declared capability (DBF/FPT, VFP knowledge, semantic analysis,
+# refactoring, privacy, relational design, PostgreSQL, MCP serving) is
+# truthfully NOT_IMPLEMENTED; baselines arrive per milestone via the
+# canonical dependency lock (spec/dependency-lock.json).
+dependencies = []
+
+[project.optional-dependencies]
+# Optional profiles are direct constraints destined for the canonical
+# dependency lock; they are NOT installed during bootstrap dependency
+# resolution unless the operator approves an explicit package-index origin.
+dev = [
+  "pytest>=8",
+  "jsonschema>=4.21",
+  "rpds-py==0.30.0",
+  "build>=1",
+  "wheel>=0.43",
+  "setuptools>=68",
+]
+
+[project.scripts]
+vfp-toolchain = "vfp_toolchain.cli:main"
+mcp-vfp9sp2 = "vfp_toolchain.mcp:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["vfp_toolchain*"]
+
+[tool.setuptools.package-data]
+vfp_toolchain = ["py.typed"]
+
+[tool.pytest.ini_options]
+# Deterministic test configuration (REQ-G00-005 / REQ-AUTO-012).
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config -p no:cacheprovider"
+filterwarnings = ["error"]
+markers = [
+  "requirement: maps a test to one or more REQ-* requirement IDs (REQ-AUTO-005)",
+  "contract: portable contract artifact tests",
+  "windows_only: test meaningful on Windows hosts",
+]
+
+[tool.ruff]
+# Deterministic static-analysis configuration.
+target-version = "py310"
+line-length = 120
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF"]
+ignore = [
+  "E501", # long requirement/documentation strings are content, not style
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vfp_toolchain"]

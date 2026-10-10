@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcp-vfp9sp2-toolchain.dev/schemas/verification-manifest.schema.json",
+  "title": "Portable verification manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sot_revision",
+    "sot_sha256",
+    "generator",
+    "content_sha256",
+    "artifact_kind",
+    "requirement_count",
+    "verifier_count",
+    "executable_verifier_count",
+    "pass_count",
+    "graph_ref",
+    "graph_content_sha256",
+    "state_vocabulary",
+    "verifiers",
+    "requirements"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "sot_revision": { "type": "integer" },
+    "sot_sha256": { "$ref": "#/$defs/sha256" },
+    "generated_at_utc": { "type": "string" },
+    "content_sha256": { "$ref": "#/$defs/sha256" },
+    "generator": { "$ref": "#/$defs/generator" },
+    "artifact_kind": { "const": "VERIFICATION_MANIFEST" },
+    "requirement_count": { "type": "integer", "minimum": 1 },
+    "verifier_count": { "type": "integer", "minimum": 1 },
+    "executable_verifier_count": { "type": "integer", "minimum": 0 },
+    "pass_count": { "type": "integer", "const": 0 },
+    "graph_ref": { "const": "spec/requirements.graph.json" },
+    "graph_content_sha256": { "$ref": "#/$defs/sha256" },
+    "state_vocabulary": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "enum": ["UNASSESSED", "PLANNED", "NOT_IMPLEMENTED", "PARTIAL", "BLOCKED", "PASS", "NOT_APPLICABLE"]
+      }
+    },
+    "verifiers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/verifier" }
+    },
+    "requirements": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/requirementEntry" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "version", "source_sha256"],
+      "properties": {
+        "identity": { "type": "string" },
+        "version": { "type": "string" },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verifier_id", "state", "command", "evidence_class", "required_capabilities", "covers", "notes"],
+      "properties": {
+        "verifier_id": { "type": "string" },
+        "state": { "enum": ["PLANNED", "EXECUTABLE"] },
+        "command": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "array", "minItems": 1, "items": { "type": "string" } }
+          ]
+        },
+        "evidence_class": { "type": "string" },
+        "required_capabilities": { "type": "array", "items": { "type": "string" } },
+        "covers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reqId" } },
+        "notes": { "type": "string" }
+      }
+    },
+    "reqId": { "type": "string", "pattern": "^REQ-[A-Z0-9]+-\\d{3}$" },
+    "requirementEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lifecycle",
+        "applicability",
+        "execution_milestone",
+        "closure_membership",
+        "verifier_ids",
+        "current_state",
+        "state_evidence"
+      ],
+      "properties": {
+        "lifecycle": {
+          "enum": ["BOOTSTRAP", "IMPLEMENTATION", "MERGE_GUARD", "RELEASE_GUARD", "DEPLOYMENT_GUARD", "FINAL_ACCEPTANCE"]
+        },
+        "applicability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["override", "expression"],
+          "properties": {
+            "override": { "type": ["string", "null"] },
+            "expression": { "type": "object" }
+          }
+        },
+        "execution_milestone": { "type": ["string", "null"] },
+        "closure_membership": { "type": "array", "items": { "type": "string" } },
+        "verifier_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "current_state": {
+          "enum": ["UNASSESSED", "PLANNED", "NOT_IMPLEMENTED", "PARTIAL", "BLOCKED", "PASS", "NOT_APPLICABLE"]
+        },
+        "state_evidence": { "type": ["object", "null"] }
+      }
+    }
+  }
+}

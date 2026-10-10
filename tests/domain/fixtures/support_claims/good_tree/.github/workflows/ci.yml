@@ -1,0 +1,8 @@
+name: ci
+on: [push]
+jobs:
+  contract:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
