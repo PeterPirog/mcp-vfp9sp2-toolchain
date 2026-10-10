@@ -7,8 +7,14 @@ name: ci
 # forbidden: non-Windows behavior is never product acceptance scope.
 #
 # Two jobs:
-#  * contract — stdlib-only deterministic contract checks; runs green with no
-#    third-party packages.
+#  * contract — the deterministic contract verifier steps run with the
+#    standard library ONLY (that stdlib capability is exactly what they
+#    prove); the complete unittest suite runs AFTER the canonical frozen dev
+#    profile (spec/dependency-lock.wheelhouse.txt, hash-pinned) is installed,
+#    because two contract tests deliberately fail closed (BLOCKED:
+#    SCHEMA_CAPABILITY_UNAVAILABLE) when the optional jsonschema capability is
+#    absent. No test is excluded, skipped or weakened; no dependency identity
+#    is changed.
 #  * build-install — clean wheel/sdist build and clean-environment install;
 #    FAILS CLOSED until spec/dependency-lock.json is resolved (the bootstrap
 #    dependency lock requires an explicitly operator-approved package-index
@@ -76,7 +82,34 @@ jobs:
         shell: pwsh
         run: python tools/verify.py support-claims
 
-      - name: Test suite (stdlib runner; pytest-compatible)
+      # All deterministic contract verifier steps above ran stdlib-only: they
+      # prove the contract machinery itself needs no third-party capability.
+      # The COMPLETE unittest suite below includes the schema/threat-model
+      # contract tests that deliberately fail closed (BLOCKED:
+      # SCHEMA_CAPABILITY_UNAVAILABLE) without the optional jsonschema
+      # capability, so the EXISTING canonical frozen dev profile is installed
+      # first - same hash-pinned mechanism as the build-install job; no
+      # second dependency list, no floating requirements, no versions here.
+      - name: Require resolved dependency lock
+        shell: pwsh
+        run: |
+          $lockPath = 'spec/dependency-lock.json'
+          if (-not (Test-Path $lockPath)) {
+            Write-Error "DEPENDENCY_LOCK_MISSING: $lockPath must exist before the full test suite."
+            exit 1
+          }
+          $lock = Get-Content $lockPath -Raw | ConvertFrom-Json
+          if ($lock.resolution_status -ne 'RESOLVED_FROZEN') {
+            Write-Error "DEPENDENCY_LOCK_NOT_FROZEN: resolution_status=$($lock.resolution_status) - an operator-approved GREENFIELD package-index origin is required."
+            exit 1
+          }
+
+      - name: Install locked dev profile (hash-pinned, exact versions)
+        shell: pwsh
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r spec/dependency-lock.wheelhouse.txt
+
+      - name: Test suite (complete unittest discovery after locked dev profile)
         shell: pwsh
         run: python -m unittest discover -s tests -t . -p "test_*.py"
 
